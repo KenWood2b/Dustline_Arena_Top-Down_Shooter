@@ -1,0 +1,71 @@
+using DustlineArena.Runtime.Config;
+using DustlineArena.Runtime.Health;
+using UnityEngine;
+
+namespace DustlineArena.Runtime.Player
+{
+    [DisallowMultipleComponent]
+    public sealed class MouseAimController : MonoBehaviour
+    {
+        [SerializeField] private PlayerMovementConfig config;
+        [SerializeField] private UnityEngine.Camera targetCamera;
+        [SerializeField] private Transform rotatedRoot;
+        [SerializeField] private HealthComponent health;
+
+        public Vector3 AimPoint { get; private set; }
+        public Vector3 AimDirection { get; private set; } = Vector3.forward;
+
+        private void Awake()
+        {
+            if (targetCamera == null)
+            {
+                targetCamera = UnityEngine.Camera.main;
+            }
+
+            if (rotatedRoot == null)
+            {
+                rotatedRoot = transform;
+            }
+
+            if (health == null)
+            {
+                health = GetComponent<HealthComponent>();
+            }
+        }
+
+        private void Update()
+        {
+            if (health != null && !health.IsAlive)
+            {
+                return;
+            }
+
+            if (targetCamera == null || rotatedRoot == null)
+            {
+                return;
+            }
+
+            Ray ray = targetCamera.ScreenPointToRay(Input.mousePosition);
+            Plane groundPlane = new Plane(Vector3.up, transform.position);
+
+            if (!groundPlane.Raycast(ray, out float distance))
+            {
+                return;
+            }
+
+            AimPoint = ray.GetPoint(distance);
+            Vector3 direction = AimPoint - rotatedRoot.position;
+            direction.y = 0f;
+
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                return;
+            }
+
+            AimDirection = direction.normalized;
+            Quaternion targetRotation = Quaternion.LookRotation(AimDirection, Vector3.up);
+            float rotationSpeed = config == null ? 720f : config.RotationSpeed;
+            rotatedRoot.rotation = Quaternion.RotateTowards(rotatedRoot.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+        }
+    }
+}

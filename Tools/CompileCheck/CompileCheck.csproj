@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <NoWarn>$(NoWarn);0649</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../Assets/_Project/Scripts/Runtime/**/*.cs" />
+    <Compile Include="../../Assets/_Project/Scripts/Editor/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="UnityEngine">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.CoreModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.PhysicsModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.InputLegacyModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AnimationModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.AnimationModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEditor">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEditor.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.RenderPipelines.Core.Runtime">
+      <HintPath>../../Library/ScriptAssemblies/Unity.RenderPipelines.Core.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.RenderPipelines.Universal.Runtime">
+      <HintPath>../../Library/ScriptAssemblies/Unity.RenderPipelines.Universal.Runtime.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

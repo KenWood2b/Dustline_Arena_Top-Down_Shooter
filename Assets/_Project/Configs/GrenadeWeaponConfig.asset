@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95be4e7f0722d11419192b8559951d2e, type: 3}
+  m_Name: GrenadeWeaponConfig
+  m_EditorClassIdentifier: 
+  visual: 4
+  damage: 85
+  shotsPerSecond: 0.55
+  projectileSpeed: 9.5
+  projectileLifetime: 1.8
+  spreadAngle: 0
+  projectilesPerShot: 1
+  explosionRadius: 3.2
+  throwUpwardSpeed: 5.5
+  minThrowSpeed: 4.5
+  maxThrowSpeed: 13
+  minThrowUpwardSpeed: 3.4
+  maxThrowUpwardSpeed: 7.5
+  throwChargeDuration: 1.4
+  hitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  projectilePrefab: {fileID: 8694197721122398616, guid: f9b6b342a4869dc48a80f088f5faf328, type: 3}
+  thrownPrefab: {fileID: 919132149155446097, guid: 2c6e762fe5742d24dac1e9749e1ed52d, type: 3}
