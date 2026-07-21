@@ -8,9 +8,11 @@ namespace DustlineArena.Runtime.Weapons
     public sealed class GrenadeProjectile : MonoBehaviour
     {
         private const int ExplosionHitBufferSize = 64;
+        private const int ShockwaveSegments = 72;
         private static Texture2D particleTexture;
         private static Material additiveParticleMaterial;
         private static Material smokeParticleMaterial;
+        private static Material shockwaveMaterial;
 
         private DamageInfo damage;
         private Rigidbody body;
@@ -105,6 +107,7 @@ namespace DustlineArena.Runtime.Weapons
 
             ParticleSystem flash = effect.AddComponent<ParticleSystem>();
             ConfigureFlash(flash, radius);
+            ConfigureShockwave(effect.transform, radius);
             ConfigureSmoke(effect.transform, radius);
 
             Destroy(effect, 3.5f);
@@ -153,7 +156,35 @@ namespace DustlineArena.Runtime.Weapons
 
             ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
             renderer.sharedMaterial = GetParticleMaterial(true);
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
             particles.Play();
+        }
+
+        private static void ConfigureShockwave(Transform parent, float radius)
+        {
+            GameObject ringObject = new GameObject("Shockwave_Ring");
+            ringObject.transform.SetParent(parent, false);
+            ringObject.transform.localPosition = Vector3.up * 0.04f;
+
+            LineRenderer ring = ringObject.AddComponent<LineRenderer>();
+            ring.useWorldSpace = false;
+            ring.loop = true;
+            ring.positionCount = ShockwaveSegments;
+            ring.widthMultiplier = 0.08f;
+            ring.numCornerVertices = 4;
+            ring.numCapVertices = 4;
+            ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            ring.receiveShadows = false;
+            ring.sharedMaterial = GetShockwaveMaterial();
+
+            for (int i = 0; i < ShockwaveSegments; i++)
+            {
+                float angle = (float)i / ShockwaveSegments * Mathf.PI * 2f;
+                ring.SetPosition(i, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * 0.1f);
+            }
+
+            GrenadeShockwaveFx shockwave = ringObject.AddComponent<GrenadeShockwaveFx>();
+            shockwave.Initialize(ring, radius);
         }
 
         private static void ConfigureSmoke(Transform parent, float radius)
@@ -210,6 +241,7 @@ namespace DustlineArena.Runtime.Weapons
 
             ParticleSystemRenderer renderer = smoke.GetComponent<ParticleSystemRenderer>();
             renderer.sharedMaterial = GetParticleMaterial(false);
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
             smoke.Play();
         }
 
@@ -259,7 +291,67 @@ namespace DustlineArena.Runtime.Weapons
                 material.SetFloat("_Blend", 1f);
             }
 
+            ConfigureTransparentMaterial(material, additive);
+
             return material;
+        }
+
+        private static Material GetShockwaveMaterial()
+        {
+            if (shockwaveMaterial != null)
+            {
+                return shockwaveMaterial;
+            }
+
+            Shader shader = Shader.Find("Sprites/Default")
+                ?? Shader.Find("Universal Render Pipeline/Unlit")
+                ?? Shader.Find("Unlit/Color");
+            shockwaveMaterial = new Material(shader)
+            {
+                name = "M_Runtime_GrenadeShockwave",
+                color = new Color(1f, 0.72f, 0.18f, 0.72f),
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            shockwaveMaterial.SetColor("_Color", shockwaveMaterial.color);
+            shockwaveMaterial.SetColor("_BaseColor", shockwaveMaterial.color);
+            ConfigureTransparentMaterial(shockwaveMaterial, true);
+            return shockwaveMaterial;
+        }
+
+        private static void ConfigureTransparentMaterial(Material material, bool additive)
+        {
+            if (material == null)
+            {
+                return;
+            }
+
+            material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            if (material.HasProperty("_Surface"))
+            {
+                material.SetFloat("_Surface", 1f);
+            }
+
+            if (material.HasProperty("_Blend"))
+            {
+                material.SetFloat("_Blend", additive ? 1f : 0f);
+            }
+
+            if (material.HasProperty("_SrcBlend"))
+            {
+                material.SetFloat("_SrcBlend", additive ? (float)UnityEngine.Rendering.BlendMode.SrcAlpha : (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            }
+
+            if (material.HasProperty("_DstBlend"))
+            {
+                material.SetFloat("_DstBlend", additive ? (float)UnityEngine.Rendering.BlendMode.One : (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            }
+
+            if (material.HasProperty("_ZWrite"))
+            {
+                material.SetFloat("_ZWrite", 0f);
+            }
+
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         }
 
         private static Texture2D GetParticleTexture()
@@ -284,6 +376,49 @@ namespace DustlineArena.Runtime.Weapons
 
             particleTexture.Apply();
             return particleTexture;
+        }
+    }
+
+    public sealed class GrenadeShockwaveFx : MonoBehaviour
+    {
+        private const float Lifetime = 0.34f;
+
+        private LineRenderer ring;
+        private float targetRadius;
+        private float age;
+        private Color startColor;
+
+        public void Initialize(LineRenderer lineRenderer, float radius)
+        {
+            ring = lineRenderer;
+            targetRadius = Mathf.Max(0.5f, radius);
+            age = 0f;
+            startColor = new Color(1f, 0.72f, 0.18f, 0.76f);
+        }
+
+        private void Update()
+        {
+            if (ring == null)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            age += Time.deltaTime;
+            float t = Mathf.Clamp01(age / Lifetime);
+            float scale = Mathf.Lerp(0.12f, targetRadius, 1f - Mathf.Pow(1f - t, 2f));
+            transform.localScale = new Vector3(scale, 1f, scale);
+            ring.widthMultiplier = Mathf.Lerp(0.12f, 0.02f, t);
+
+            Color color = startColor;
+            color.a *= 1f - t;
+            ring.startColor = color;
+            ring.endColor = color;
+
+            if (age >= Lifetime)
+            {
+                Destroy(gameObject);
+            }
         }
     }
 }

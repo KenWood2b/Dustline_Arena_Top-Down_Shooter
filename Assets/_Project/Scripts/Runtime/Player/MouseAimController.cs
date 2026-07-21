@@ -15,6 +15,23 @@ namespace DustlineArena.Runtime.Player
         public Vector3 AimPoint { get; private set; }
         public Vector3 AimDirection { get; private set; } = Vector3.forward;
 
+        public Vector3 GetAimDirectionFrom(Vector3 origin)
+        {
+            if (targetCamera != null && TryGetAimPointOnPlane(origin.y, out Vector3 point))
+            {
+                Vector3 direction = point - origin;
+                direction.y = 0f;
+                if (direction.sqrMagnitude > 0.0001f)
+                {
+                    return direction.normalized;
+                }
+            }
+
+            Vector3 fallback = AimPoint - origin;
+            fallback.y = 0f;
+            return fallback.sqrMagnitude > 0.0001f ? fallback.normalized : AimDirection;
+        }
+
         private void Awake()
         {
             if (targetCamera == null)
@@ -45,15 +62,12 @@ namespace DustlineArena.Runtime.Player
                 return;
             }
 
-            Ray ray = targetCamera.ScreenPointToRay(Input.mousePosition);
-            Plane groundPlane = new Plane(Vector3.up, transform.position);
-
-            if (!groundPlane.Raycast(ray, out float distance))
+            if (!TryGetAimPointOnPlane(transform.position.y, out Vector3 point))
             {
                 return;
             }
 
-            AimPoint = ray.GetPoint(distance);
+            AimPoint = point;
             Vector3 direction = AimPoint - rotatedRoot.position;
             direction.y = 0f;
 
@@ -66,6 +80,25 @@ namespace DustlineArena.Runtime.Player
             Quaternion targetRotation = Quaternion.LookRotation(AimDirection, Vector3.up);
             float rotationSpeed = config == null ? 720f : config.RotationSpeed;
             rotatedRoot.rotation = Quaternion.RotateTowards(rotatedRoot.rotation, targetRotation, rotationSpeed * Time.deltaTime);
+        }
+
+        private bool TryGetAimPointOnPlane(float height, out Vector3 point)
+        {
+            point = default;
+            if (targetCamera == null)
+            {
+                return false;
+            }
+
+            Ray ray = targetCamera.ScreenPointToRay(Input.mousePosition);
+            Plane aimPlane = new Plane(Vector3.up, new Vector3(0f, height, 0f));
+            if (!aimPlane.Raycast(ray, out float distance))
+            {
+                return false;
+            }
+
+            point = ray.GetPoint(distance);
+            return true;
         }
     }
 }

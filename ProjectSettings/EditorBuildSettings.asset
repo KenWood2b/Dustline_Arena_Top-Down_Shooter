@@ -8,4 +8,16 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/Dustline_Arena_01.unity
     guid: 1c37bdfdb214b1147a9a8c4df2835632
+  - enabled: 1
+    path: Assets/_Project/Scenes/Dustline_Arena_02.unity
+    guid: 9d93d6bbfef24744aa5bd107d3db7d0e
+  - enabled: 1
+    path: Assets/_Project/Scenes/Dustline_Arena_03.unity
+    guid: abf43e1467564f20a74b9ce55b12c031
+  - enabled: 1
+    path: Assets/_Project/Scenes/Dustline_Arena_04.unity
+    guid: c7a7f0a94e8143f993516e499910d3c1
+  - enabled: 1
+    path: Assets/_Project/Scenes/Dustline_Arena_05.unity
+    guid: d4bcd54432224d54a4696263647da544
   m_configObjects: {}

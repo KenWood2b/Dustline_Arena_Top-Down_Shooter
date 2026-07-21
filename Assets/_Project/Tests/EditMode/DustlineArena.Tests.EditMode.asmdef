@@ -1,0 +1,21 @@
+{
+  "name": "DustlineArena.Tests.EditMode",
+  "rootNamespace": "DustlineArena.Tests.EditMode",
+  "references": [
+    "DustlineArena.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

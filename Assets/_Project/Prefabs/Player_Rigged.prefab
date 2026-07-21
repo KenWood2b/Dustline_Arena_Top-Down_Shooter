@@ -17,6 +17,8 @@ GameObject:
   - component: {fileID: 2095987493866776293}
   - component: {fileID: 6677411468840164643}
   - component: {fileID: 1540962889441093074}
+  - component: {fileID: 4681573982135792468}
+  - component: {fileID: 5792684093246803579}
   - component: {fileID: 7953866086273198266}
   m_Layer: 0
   m_Name: Player_Rigged
@@ -178,8 +180,51 @@ MonoBehaviour:
   aimController: {fileID: 6677411468840164643}
   weapon: {fileID: 7576261054918763561}
   health: {fileID: 0}
+--- !u!114 &4681573982135792468
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1771619920246897207}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5a9d2b32e4c5d69a8b7c0123d456789, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  config: {fileID: 11400000, guid: c8dce5e6517f809cdbafe34560789012, type: 2}
+  inputReader: {fileID: 3451808886984624991}
+  aimController: {fileID: 6677411468840164643}
+  weapon: {fileID: 7576261054918763561}
+  ownerTeam: {fileID: 6461480872636404660}
+  health: {fileID: 8079476365891443011}
   trajectorySegments: 24
   trajectoryStep: 0.08
+--- !u!114 &5792684093246803579
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1771619920246897207}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9edf6f7628091adecb0f45671890123, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  health: {fileID: 8079476365891443011}
+  weapon: {fileID: 7576261054918763561}
+  grenades: {fileID: 4681573982135792468}
+  waveSpawner: {fileID: 0}
+  aimController: {fileID: 0}
+  targetCamera: {fileID: 0}
+  cameraFollow: {fileID: 0}
+  hideSystemCursor: 1
+  weaponHudScale: 0.86
+  crosshairBaseGap: 8
+  crosshairBusyGap: 16
+  crosshairFireBloomMax: 14
+  crosshairFireBloomDecay: 42
 --- !u!114 &7953866086273198266
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -197,7 +242,19 @@ MonoBehaviour:
   health: {fileID: 8079476365891443011}
   weapon: {fileID: 7576261054918763561}
   enemyBrain: {fileID: 0}
+  navMeshAgent: {fileID: 0}
   maxSpeed: 8
+  movingHitReactSpeed: 0.15
+  movingHitReactRoot: {fileID: 0}
+  movingHitReactDuration: 0.18
+  movingHitReactRotation: 9
+  movingHitReactOffset: 0.08
+  enemyAttackFeedbackRoot: {fileID: 0}
+  enemyAttackPunchDistance: 0
+  enemyAttackPunchDuration: 0.22
+  enemyAttackPunchVibrato: 2
+  enemyAttackPunchElasticity: 0.18
+  enemyAttackPitch: 4
 --- !u!1 &1998823039459711226
 GameObject:
   m_ObjectHideFlags: 0
@@ -297,6 +354,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   config: {fileID: 11400000, guid: 8d06f8971d77f934fba840a8d3ade63d, type: 2}
   muzzle: {fileID: 6182939106541995106}
+  projectilePool: {fileID: 0}
   ownerTeam: {fileID: 6461480872636404660}
   ownerHealth: {fileID: 0}
   normalizePlayerWeaponPose: 1

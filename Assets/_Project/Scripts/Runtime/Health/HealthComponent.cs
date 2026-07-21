@@ -16,6 +16,7 @@ namespace DustlineArena.Runtime.Health
         public event Action<HealthChangedArgs> Changed;
         public event Action<DamageInfo> Damaged;
         public event Action Died;
+        public static event Action<HealthComponent, DamageInfo> AnyDamaged;
 
         public float Current => currentHealth;
         public float Max => maxHealth;
@@ -38,8 +39,7 @@ namespace DustlineArena.Runtime.Health
 
         public void ResetHealth()
         {
-            currentHealth = maxHealth;
-            isInitialized = true;
+            InitializeHealth();
             Changed?.Invoke(new HealthChangedArgs(currentHealth, maxHealth, 0f));
         }
 
@@ -47,7 +47,7 @@ namespace DustlineArena.Runtime.Health
         {
             if (!isInitialized)
             {
-                ResetHealth();
+                InitializeHealth();
             }
 
             if (!IsAlive || damage.Amount <= 0f)
@@ -59,6 +59,7 @@ namespace DustlineArena.Runtime.Health
             currentHealth = Mathf.Max(0f, currentHealth - damage.Amount);
 
             Damaged?.Invoke(damage);
+            AnyDamaged?.Invoke(this, damage);
             Changed?.Invoke(new HealthChangedArgs(currentHealth, maxHealth, currentHealth - previousHealth));
 
             if (currentHealth <= 0f)
@@ -74,6 +75,11 @@ namespace DustlineArena.Runtime.Health
 
         public bool Heal(float amount)
         {
+            if (!isInitialized)
+            {
+                InitializeHealth();
+            }
+
             if (!IsAlive || amount <= 0f || currentHealth >= maxHealth)
             {
                 return false;
@@ -83,6 +89,12 @@ namespace DustlineArena.Runtime.Health
             currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
             Changed?.Invoke(new HealthChangedArgs(currentHealth, maxHealth, currentHealth - previousHealth));
             return currentHealth > previousHealth;
+        }
+
+        private void InitializeHealth()
+        {
+            currentHealth = maxHealth;
+            isInitialized = true;
         }
     }
 }

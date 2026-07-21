@@ -2,6 +2,7 @@ using DustlineArena.Runtime.Common;
 using DustlineArena.Runtime.Enemies;
 using DustlineArena.Runtime.Health;
 using DustlineArena.Runtime.Weapons;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -27,11 +28,19 @@ namespace DustlineArena.Runtime.Animation
         [SerializeField, Min(0.01f)] private float movingHitReactDuration = 0.18f;
         [SerializeField, Min(0f)] private float movingHitReactRotation = 9f;
         [SerializeField, Min(0f)] private float movingHitReactOffset = 0.08f;
+        [SerializeField] private Transform enemyAttackFeedbackRoot;
+        [SerializeField, Min(0f)] private float enemyAttackPunchDistance;
+        [SerializeField, Min(0.01f)] private float enemyAttackPunchDuration = 0.22f;
+        [SerializeField, Min(0)] private int enemyAttackPunchVibrato = 2;
+        [SerializeField, Range(0f, 1f)] private float enemyAttackPunchElasticity = 0.18f;
+        [SerializeField, Min(0f)] private float enemyAttackPitch = 4f;
 
         private Vector3 movingHitReactBasePosition;
         private Quaternion movingHitReactBaseRotation;
         private Vector3 movingHitReactDirection;
         private float movingHitReactTimer;
+        private Tween enemyAttackPositionTween;
+        private Tween enemyAttackRotationTween;
 
         private void Awake()
         {
@@ -70,6 +79,11 @@ namespace DustlineArena.Runtime.Animation
                 movingHitReactRoot = animator.transform;
             }
 
+            if (enemyAttackFeedbackRoot == null && animator != null)
+            {
+                enemyAttackFeedbackRoot = animator.transform;
+            }
+
             CacheMovingHitReactPose();
             EnsureLeftHandWeaponIK();
         }
@@ -95,6 +109,7 @@ namespace DustlineArena.Runtime.Animation
 
         private void OnDisable()
         {
+            KillEnemyAttackTweens();
             ResetMovingHitReactPose();
 
             if (health != null)
@@ -135,6 +150,11 @@ namespace DustlineArena.Runtime.Animation
             if (animator != null)
             {
                 animator.SetTrigger(FireHash);
+            }
+
+            if (enemyBrain != null)
+            {
+                PlayEnemyAttackFeedback();
             }
         }
 
@@ -250,6 +270,37 @@ namespace DustlineArena.Runtime.Animation
             movingHitReactTimer = 0f;
             movingHitReactRoot.localPosition = movingHitReactBasePosition;
             movingHitReactRoot.localRotation = movingHitReactBaseRotation;
+        }
+
+        private void PlayEnemyAttackFeedback()
+        {
+            if (enemyAttackFeedbackRoot == null || (enemyAttackPunchDistance <= 0f && enemyAttackPitch <= 0f))
+            {
+                return;
+            }
+
+            KillEnemyAttackTweens();
+            if (enemyAttackPunchDistance > 0f)
+            {
+                enemyAttackPositionTween = enemyAttackFeedbackRoot
+                    .DOPunchPosition(Vector3.forward * enemyAttackPunchDistance, enemyAttackPunchDuration, enemyAttackPunchVibrato, enemyAttackPunchElasticity)
+                    .SetTarget(this);
+            }
+
+            if (enemyAttackPitch > 0f)
+            {
+                enemyAttackRotationTween = enemyAttackFeedbackRoot
+                    .DOPunchRotation(new Vector3(-enemyAttackPitch, 0f, 0f), enemyAttackPunchDuration, enemyAttackPunchVibrato, enemyAttackPunchElasticity)
+                    .SetTarget(this);
+            }
+        }
+
+        private void KillEnemyAttackTweens()
+        {
+            enemyAttackPositionTween?.Kill(true);
+            enemyAttackRotationTween?.Kill(true);
+            enemyAttackPositionTween = null;
+            enemyAttackRotationTween = null;
         }
 
         private void EnsureLeftHandWeaponIK()

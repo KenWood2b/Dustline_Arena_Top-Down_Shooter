@@ -17,26 +17,18 @@ namespace DustlineArena.Runtime.Pickups
         private int nextRewardIndex;
         private int lastRewardPointIndex = -1;
         private WeaponPickup activePickup;
+        private WaveSpawner subscribedSpawner;
 
         private void OnEnable()
         {
-            if (waveSpawner != null)
-            {
-                waveSpawner.EnemyKilled += OnEnemyKilled;
-            }
+            SubscribeToSpawner();
+            SubscribeToActivePickup();
         }
 
         private void OnDisable()
         {
-            if (waveSpawner != null)
-            {
-                waveSpawner.EnemyKilled -= OnEnemyKilled;
-            }
-
-            if (activePickup != null)
-            {
-                activePickup.PickedUp -= OnPickupCollected;
-            }
+            UnsubscribeFromSpawner();
+            UnsubscribeFromActivePickup();
         }
 
         public void Configure(
@@ -46,11 +38,84 @@ namespace DustlineArena.Runtime.Pickups
             GameObject[] models,
             Transform[] points)
         {
+            UnsubscribeFromSpawner();
             waveSpawner = source;
             killThresholds = thresholds;
             weaponConfigs = configs;
             weaponModels = models;
             rewardPoints = points;
+
+            if (isActiveAndEnabled)
+            {
+                SubscribeToSpawner();
+            }
+        }
+
+        public void SetRewardPoints(Transform[] points)
+        {
+            rewardPoints = points;
+            lastRewardPointIndex = -1;
+        }
+
+        private void SubscribeToSpawner()
+        {
+            if (waveSpawner == null || subscribedSpawner == waveSpawner)
+            {
+                return;
+            }
+
+            UnsubscribeFromSpawner();
+            subscribedSpawner = waveSpawner;
+            subscribedSpawner.EnemyKilled += OnEnemyKilled;
+            subscribedSpawner.WaveStarted += OnWaveStarted;
+        }
+
+        private void UnsubscribeFromSpawner()
+        {
+            if (subscribedSpawner == null)
+            {
+                return;
+            }
+
+            subscribedSpawner.EnemyKilled -= OnEnemyKilled;
+            subscribedSpawner.WaveStarted -= OnWaveStarted;
+            subscribedSpawner = null;
+        }
+
+        private void SubscribeToActivePickup()
+        {
+            if (activePickup != null)
+            {
+                activePickup.PickedUp -= OnPickupCollected;
+                activePickup.PickedUp += OnPickupCollected;
+            }
+        }
+
+        private void UnsubscribeFromActivePickup()
+        {
+            if (activePickup != null)
+            {
+                activePickup.PickedUp -= OnPickupCollected;
+            }
+        }
+
+        private void OnWaveStarted(int index)
+        {
+            if (index != 0)
+            {
+                return;
+            }
+
+            nextRewardIndex = 0;
+            lastRewardPointIndex = -1;
+            if (activePickup == null)
+            {
+                return;
+            }
+
+            UnsubscribeFromActivePickup();
+            Destroy(activePickup.gameObject);
+            activePickup = null;
         }
 
         private void OnEnemyKilled(int totalKills)

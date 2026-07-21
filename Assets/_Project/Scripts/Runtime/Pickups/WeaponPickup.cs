@@ -17,6 +17,7 @@ namespace DustlineArena.Runtime.Pickups
         [SerializeField, Min(0f)] private float rotationSpeed = 70f;
         [SerializeField, Min(0f)] private float hoverHeight = 0.12f;
         [SerializeField, Min(0f)] private float hoverSpeed = 1.8f;
+        [SerializeField] private bool visualFeedbackEnabled;
 
         private Vector3 basePosition;
         private Vector3 visualBaseLocalPosition;
@@ -30,6 +31,11 @@ namespace DustlineArena.Runtime.Pickups
             {
                 visualBaseLocalPosition = animatedVisual.localPosition;
             }
+
+            if (visualFeedbackEnabled)
+            {
+                RefreshFeedback();
+            }
         }
 
         private void Reset()
@@ -40,6 +46,11 @@ namespace DustlineArena.Runtime.Pickups
 
         private void Update()
         {
+            if (!visualFeedbackEnabled)
+            {
+                return;
+            }
+
             if (animatedVisual != null)
             {
                 animatedVisual.Rotate(Vector3.up, rotationSpeed * Time.deltaTime, Space.World);
@@ -65,10 +76,17 @@ namespace DustlineArena.Runtime.Pickups
             visualBaseLocalPosition = animatedVisual == null
                 ? Vector3.zero
                 : animatedVisual.localPosition;
+            visualFeedbackEnabled = true;
+            RefreshFeedback();
         }
 
         private void OnTriggerEnter(Collider other)
         {
+            if (!visualFeedbackEnabled)
+            {
+                return;
+            }
+
             HealthComponent health = other.GetComponentInParent<HealthComponent>();
             if (health == null || !health.IsAlive)
             {
@@ -95,12 +113,25 @@ namespace DustlineArena.Runtime.Pickups
             }
 
             weapon.Equip(weaponConfig);
+            PickupFeedback.ShowPopup(transform.position, $"{weaponConfig.Visual.ToString().ToUpperInvariant()} READY", new Color(1f, 0.72f, 0.16f, 1f));
             PickedUp?.Invoke(this);
 
             if (destroyOnPickup)
             {
                 Destroy(gameObject);
             }
+        }
+
+        private void RefreshFeedback()
+        {
+            if (!visualFeedbackEnabled)
+            {
+                PickupFeedback.Remove(gameObject);
+                return;
+            }
+
+            string label = weaponConfig == null ? "WEAPON" : weaponConfig.Visual.ToString().ToUpperInvariant();
+            PickupFeedback.Ensure(gameObject, label, new Color(1f, 0.72f, 0.16f, 1f));
         }
     }
 }

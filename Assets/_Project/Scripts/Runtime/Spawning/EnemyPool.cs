@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DustlineArena.Runtime.Health;
+using DustlineArena.Runtime.Pickups;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -8,7 +9,7 @@ namespace DustlineArena.Runtime.Spawning
     [DisallowMultipleComponent]
     public sealed class EnemyPool : MonoBehaviour
     {
-        private const int DefaultPrewarmCount = 12;
+        private const int DefaultPrewarmCount = 0;
         private static readonly Dictionary<GameObject, EnemyPool> SharedPools = new Dictionary<GameObject, EnemyPool>();
 
         [SerializeField] private GameObject enemyPrefab;
@@ -50,16 +51,18 @@ namespace DustlineArena.Runtime.Spawning
 
             GameObject enemy = available.Count > 0
                 ? available.Dequeue()
-                : CreateEnemy();
+                : CreateEnemy(position, rotation);
             if (enemy == null)
             {
                 return null;
             }
 
             Transform enemyTransform = enemy.transform;
+            enemyTransform.SetParent(null, true);
             enemyTransform.SetPositionAndRotation(position, rotation);
             enemy.SetActive(true);
-            ResetEnemy(enemy);
+            ResetEnemy(enemy, position);
+            enemy.SetActive(true);
             return enemy;
         }
 
@@ -85,7 +88,7 @@ namespace DustlineArena.Runtime.Spawning
             prewarmed = true;
             for (int i = 0; i < prewarmCount; i++)
             {
-                GameObject enemy = CreateEnemy();
+                GameObject enemy = CreateEnemy(transform.position, transform.rotation);
                 if (enemy != null)
                 {
                     Despawn(enemy);
@@ -93,14 +96,14 @@ namespace DustlineArena.Runtime.Spawning
             }
         }
 
-        private GameObject CreateEnemy()
+        private GameObject CreateEnemy(Vector3 position, Quaternion rotation)
         {
             if (enemyPrefab == null)
             {
                 return null;
             }
 
-            GameObject instance = Instantiate(enemyPrefab, transform);
+            GameObject instance = Instantiate(enemyPrefab, position, rotation);
             instance.name = enemyPrefab.name;
             instance.SetActive(false);
             if (instance.TryGetComponent(out HealthComponent health))
@@ -108,11 +111,26 @@ namespace DustlineArena.Runtime.Spawning
                 health.DestroyOnDeath = false;
             }
 
+            if (!instance.TryGetComponent(out EnemyAmmoDropper _))
+            {
+                instance.AddComponent<EnemyAmmoDropper>();
+            }
+
             return instance;
         }
 
-        private static void ResetEnemy(GameObject enemy)
+        private static void ResetEnemy(GameObject enemy, Vector3 position)
         {
+            foreach (Renderer renderer in enemy.GetComponentsInChildren<Renderer>(true))
+            {
+                renderer.enabled = true;
+            }
+
+            foreach (Collider collider in enemy.GetComponentsInChildren<Collider>(true))
+            {
+                collider.enabled = true;
+            }
+
             if (enemy.TryGetComponent(out HealthComponent health))
             {
                 health.DestroyOnDeath = false;
@@ -125,14 +143,23 @@ namespace DustlineArena.Runtime.Spawning
                 body.angularVelocity = Vector3.zero;
             }
 
-            if (enemy.TryGetComponent(out NavMeshAgent agent) && agent.enabled && agent.isOnNavMesh)
+            if (enemy.TryGetComponent(out NavMeshAgent agent))
             {
-                agent.isStopped = false;
-                agent.ResetPath();
+                agent.enabled = true;
+                if (NavMesh.SamplePosition(position, out NavMeshHit hit, 4f, NavMesh.AllAreas))
+                {
+                    agent.Warp(hit.position);
+                }
+
+                if (agent.isOnNavMesh)
+                {
+                    agent.isStopped = false;
+                    agent.ResetPath();
+                }
             }
 
             Animator animator = enemy.GetComponentInChildren<Animator>(true);
-            if (animator != null)
+            if (animator != null && enemy.activeInHierarchy)
             {
                 animator.Rebind();
                 animator.Update(0f);

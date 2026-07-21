@@ -1,7 +1,10 @@
 {
   "name": "DustlineArena.Runtime",
   "rootNamespace": "DustlineArena.Runtime",
-  "references": [],
+  "references": [
+    "Unity.TextMeshPro",
+    "UnityEngine.UI"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

@@ -26,8 +26,13 @@ MonoBehaviour:
   minThrowUpwardSpeed: 3.5
   maxThrowUpwardSpeed: 7
   throwChargeDuration: 1.25
+  magazineSize: 8
+  startingReserveAmmo: 24
+  maxReserveAmmo: 40
+  reloadDuration: 2.1
+  ammoPerPickup: 8
   hitMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  projectilePrefab: {fileID: 8694197721122398616, guid: f9b6b342a4869dc48a80f088f5faf328, type: 3}
+  projectilePrefab: {fileID: 8830000000000000001, guid: b0ed40264e7740479327192f4a8f66db, type: 3}
   thrownPrefab: {fileID: 0}
