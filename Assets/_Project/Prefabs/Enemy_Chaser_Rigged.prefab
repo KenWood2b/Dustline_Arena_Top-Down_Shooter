@@ -130,6 +130,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   config: {fileID: 11400000, guid: 6e16772346ae8ed42a89f641da818730, type: 2}
   target: {fileID: 0}
+  approachScatterRadius: 0.9
+  attackMovementLockDuration: 0.9
+  attackReachPadding: 0.15
+  useAttackSlots: 1
+  attackSlotsPerRing: 10
+  attackSlotRings: 3
+  attackSlotRingSpacing: 0.72
+  avoidancePriorityMin: 35
+  avoidancePriorityMax: 65
 --- !u!114 &5904751595221089626
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -154,6 +163,12 @@ MonoBehaviour:
   movingHitReactDuration: 0.18
   movingHitReactRotation: 9
   movingHitReactOffset: 0.08
+  enemyAttackFeedbackRoot: {fileID: 0}
+  enemyAttackPunchDistance: 0
+  enemyAttackPunchDuration: 0.22
+  enemyAttackPunchVibrato: 2
+  enemyAttackPunchElasticity: 0.18
+  enemyAttackPitch: 4
 --- !u!195 &1559938055222379721
 NavMeshAgent:
   m_ObjectHideFlags: 0

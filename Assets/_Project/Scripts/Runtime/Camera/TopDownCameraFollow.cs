@@ -11,8 +11,11 @@ namespace DustlineArena.Runtime.Camera
         [SerializeField, Min(0f)] private float rotationSharpness = 18f;
         [SerializeField] private bool lookAtTarget = true;
         [SerializeField] private bool lockTargetHeight = true;
+        [SerializeField, Min(0f)] private float shakeDecaySharpness = 18f;
 
         private float targetHeight;
+        private float shakeStrength;
+        private Vector2 shakeVelocity;
         private bool hasTargetHeight;
 
         private void LateUpdate()
@@ -44,12 +47,42 @@ namespace DustlineArena.Runtime.Camera
                 float rotationT = 1f - Mathf.Exp(-rotationSharpness * Time.deltaTime);
                 transform.rotation = Quaternion.Slerp(transform.rotation, desiredRotation, rotationT);
             }
+
+            ApplyShake();
         }
 
         public void SetTarget(Transform newTarget)
         {
             target = newTarget;
             hasTargetHeight = false;
+        }
+
+        public void AddShake(float strength)
+        {
+            if (strength <= 0f)
+            {
+                return;
+            }
+
+            shakeStrength = Mathf.Max(shakeStrength, strength);
+            shakeVelocity += UnityEngine.Random.insideUnitCircle.normalized * strength;
+        }
+
+        private void ApplyShake()
+        {
+            if (shakeStrength <= 0.001f)
+            {
+                shakeStrength = 0f;
+                shakeVelocity = Vector2.zero;
+                return;
+            }
+
+            Vector2 randomOffset = UnityEngine.Random.insideUnitCircle * shakeStrength + shakeVelocity;
+            transform.position += transform.right * randomOffset.x + transform.up * randomOffset.y;
+
+            float decay = 1f - Mathf.Exp(-shakeDecaySharpness * Time.deltaTime);
+            shakeStrength = Mathf.Lerp(shakeStrength, 0f, decay);
+            shakeVelocity = Vector2.Lerp(shakeVelocity, Vector2.zero, decay);
         }
     }
 }

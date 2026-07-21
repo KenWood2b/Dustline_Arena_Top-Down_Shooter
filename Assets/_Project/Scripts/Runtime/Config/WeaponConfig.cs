@@ -28,6 +28,12 @@ namespace DustlineArena.Runtime.Config
         [SerializeField, Min(0f)] private float minThrowUpwardSpeed = 3.5f;
         [SerializeField, Min(0f)] private float maxThrowUpwardSpeed = 7f;
         [SerializeField, Min(0.05f)] private float throwChargeDuration = 1.25f;
+        [Header("Ammo")]
+        [SerializeField, Min(1)] private int magazineSize = 30;
+        [SerializeField, Min(0)] private int startingReserveAmmo = 90;
+        [SerializeField, Min(0)] private int maxReserveAmmo = 120;
+        [SerializeField, Min(0.05f)] private float reloadDuration = 1.6f;
+        [SerializeField, Min(1)] private int ammoPerPickup = 24;
         [SerializeField] private LayerMask hitMask = ~0;
         [SerializeField] private GameObject projectilePrefab;
         [SerializeField] private GameObject thrownPrefab;
@@ -46,6 +52,11 @@ namespace DustlineArena.Runtime.Config
         public float MinThrowUpwardSpeed => minThrowUpwardSpeed;
         public float MaxThrowUpwardSpeed => maxThrowUpwardSpeed;
         public float ThrowChargeDuration => throwChargeDuration;
+        public int MagazineSize => magazineSize;
+        public int StartingReserveAmmo => Mathf.Min(startingReserveAmmo, maxReserveAmmo);
+        public int MaxReserveAmmo => maxReserveAmmo;
+        public float ReloadDuration => reloadDuration;
+        public int AmmoPerPickup => ammoPerPickup;
         public LayerMask HitMask => hitMask;
         public GameObject ProjectilePrefab => projectilePrefab;
         public GameObject ThrownPrefab => thrownPrefab;

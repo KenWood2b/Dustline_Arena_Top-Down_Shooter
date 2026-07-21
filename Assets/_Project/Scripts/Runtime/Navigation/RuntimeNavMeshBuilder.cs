@@ -65,6 +65,7 @@ namespace DustlineArena.Runtime.Navigation
             }
 
             IsBuilding = false;
+            HasBuilt = false;
             PrepareBuild(out NavMeshBuildSettings settings, out Bounds bounds);
 
             if (!NavMeshBuilder.UpdateNavMeshData(navMeshData, settings, sources, bounds))
@@ -84,6 +85,7 @@ namespace DustlineArena.Runtime.Navigation
                 StopCoroutine(buildRoutine);
             }
 
+            HasBuilt = false;
             buildRoutine = StartCoroutine(BuildAsyncRoutine());
         }
 
@@ -121,6 +123,7 @@ namespace DustlineArena.Runtime.Navigation
         {
             bounds = new Bounds(transform.position, buildSize);
             sources.Clear();
+            ArenaColliderRepair.RepairLoadedArena();
             CollectColliderSources(sourceRoot == null ? transform : sourceRoot, bounds, minimumWalkableTopSize, sources);
 
             settings = NavMesh.GetSettingsByID(0);
@@ -151,7 +154,11 @@ namespace DustlineArena.Runtime.Navigation
             Collider[] colliders = root.GetComponentsInChildren<Collider>(true);
             foreach (Collider collider in colliders)
             {
-                if (collider == null || !collider.enabled || collider.isTrigger || !bounds.Intersects(collider.bounds))
+                if (collider == null
+                    || !collider.enabled
+                    || !collider.gameObject.activeInHierarchy
+                    || collider.isTrigger
+                    || !bounds.Intersects(collider.bounds))
                 {
                     continue;
                 }

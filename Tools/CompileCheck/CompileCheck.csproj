@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="../../Assets/_Project/Scripts/Runtime/**/*.cs" />
     <Compile Include="../../Assets/_Project/Scripts/Editor/**/*.cs" />
+    <Compile Include="../../Assets/_Project/Tests/**/*.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,14 +29,47 @@
     <Reference Include="UnityEngine.AnimationModule">
       <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.AnimationModule.dll</HintPath>
     </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.AudioModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.AIModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.AIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.ParticleSystemModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.ImageConversionModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.IMGUIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.TextRenderingModule.dll</HintPath>
+    </Reference>
     <Reference Include="UnityEditor">
       <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEditor.dll</HintPath>
+    </Reference>
+    <Reference Include="nunit.framework">
+      <HintPath>../../Library/PackageCache/com.unity.ext.nunit@1.0.6/net35/unity-custom/nunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="Unity.RenderPipelines.Core.Runtime">
       <HintPath>../../Library/ScriptAssemblies/Unity.RenderPipelines.Core.Runtime.dll</HintPath>
     </Reference>
     <Reference Include="Unity.RenderPipelines.Universal.Runtime">
       <HintPath>../../Library/ScriptAssemblies/Unity.RenderPipelines.Universal.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>../../Library/ScriptAssemblies/UnityEngine.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>C:/Program Files/Unity/Hub/Editor/2022.3.62f2/Editor/Data/Managed/UnityEngine/UnityEngine.UIModule.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>../../Library/ScriptAssemblies/Unity.TextMeshPro.dll</HintPath>
+    </Reference>
+    <Reference Include="DOTween">
+      <HintPath>../../Assets/Plugins/Demigiant/DOTween/DOTween.dll</HintPath>
     </Reference>
   </ItemGroup>
 </Project>

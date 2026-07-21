@@ -26,6 +26,11 @@ MonoBehaviour:
   minThrowUpwardSpeed: 3.4
   maxThrowUpwardSpeed: 7.5
   throwChargeDuration: 1.4
+  magazineSize: 1
+  startingReserveAmmo: 0
+  maxReserveAmmo: 0
+  reloadDuration: 1
+  ammoPerPickup: 1
   hitMask:
     serializedVersion: 2
     m_Bits: 4294967295

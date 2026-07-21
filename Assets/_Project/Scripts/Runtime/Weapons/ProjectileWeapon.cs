@@ -1,7 +1,10 @@
 using DustlineArena.Runtime.Common;
 using DustlineArena.Runtime.Config;
+using DustlineArena.Runtime.Feedback;
 using DustlineArena.Runtime.Health;
+using DG.Tweening;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace DustlineArena.Runtime.Weapons
@@ -42,29 +45,62 @@ namespace DustlineArena.Runtime.Weapons
         [SerializeField] private Vector3 muzzleLocalPosition = new Vector3(0f, 0.2f, 1f);
 
         private float nextFireTime;
+        private float reloadCompleteTime;
+        private bool isReloading;
+        private AmmoState currentAmmo;
+        private readonly Dictionary<WeaponConfig, AmmoState> ammoStates = new Dictionary<WeaponConfig, AmmoState>();
         private Transform rightHandGrip;
         private Transform leftHandGrip;
         private Animator ownerAnimator;
         private Transform animatedRightHand;
         private Transform weaponSocket;
         private int lastPoseRefreshFrame = -1;
+        private Vector3 recoilLocalOffset;
+        private Vector3 recoilLocalEuler;
 
         public event Action Fired;
+        public event Action AmmoChanged;
+        public event Action ReloadStarted;
+        public event Action ReloadCompleted;
+        public static event Action<ProjectileWeapon> AnyFired;
 
         public WeaponConfig Config => config;
         public Transform Muzzle => muzzle;
         public Transform RightHandGrip => rightHandGrip == null ? transform : rightHandGrip;
         public Transform LeftHandGrip => leftHandGrip == null ? transform : leftHandGrip;
         public Transform OwnerRoot => ownerTeam == null ? transform.root : ownerTeam.transform;
-        public bool IsGrenadeEquipped => config != null && config.Visual == WeaponVisualId.Grenade;
-        public float GrenadeChargeDuration => config == null ? 1f : config.ThrowChargeDuration;
         public bool UsesLeftHand => config != null && GetVisualProfile().usesLeftHand;
+        public int AmmoInMagazine => currentAmmo == null ? 0 : currentAmmo.Magazine;
+        public int ReserveAmmo => currentAmmo == null ? 0 : currentAmmo.Reserve;
+        public int TotalAmmo => AmmoInMagazine + ReserveAmmo;
+        public bool IsReloading => isReloading;
+        public bool UsesIncrementalReload => config != null && config.Visual == WeaponVisualId.Shotgun;
+        public float ReloadProgress01 => !isReloading || config == null
+            ? 0f
+            : 1f - Mathf.Clamp01((reloadCompleteTime - Time.time) / GetReloadStepDuration());
+        public bool CanReload => config != null
+            && currentAmmo != null
+            && !isReloading
+            && currentAmmo.Magazine < config.MagazineSize
+            && currentAmmo.Reserve > 0;
         public bool CanFire =>
             config != null
+            && currentAmmo != null
+            && (!isReloading || UsesIncrementalReload)
+            && currentAmmo.Magazine > 0
             && Time.time >= nextFireTime
-            && (config.Visual == WeaponVisualId.Grenade
-                ? config.ThrownPrefab != null
-                : config.ProjectilePrefab != null);
+            && config.ProjectilePrefab != null;
+
+        public void SetVisualSuppressed(bool suppressed)
+        {
+            if (ownerHealth != null && !ownerHealth.IsAlive)
+            {
+                SetWeaponVisible(false);
+                return;
+            }
+
+            SetWeaponVisible(!suppressed);
+        }
 
         private void OnValidate()
         {
@@ -90,12 +126,15 @@ namespace DustlineArena.Runtime.Weapons
                 ownerHealth = GetComponentInParent<HealthComponent>();
             }
 
+            currentAmmo = GetOrCreateAmmoState(config);
+
             CacheAnimatedRightHand();
 
             if (normalizePlayerWeaponPose && ownerTeam != null && ownerTeam.Team == TeamId.Player)
             {
                 NormalizePlayerWeaponPose();
                 EnsurePlayerWeaponAssetModel();
+                SetWeaponVisible(true);
             }
         }
 
@@ -109,6 +148,10 @@ namespace DustlineArena.Runtime.Weapons
 
         private void OnDisable()
         {
+            DOTween.Kill(this);
+            recoilLocalOffset = Vector3.zero;
+            recoilLocalEuler = Vector3.zero;
+            CancelReload();
             if (ownerHealth != null)
             {
                 ownerHealth.Died -= HideOnOwnerDeath;
@@ -117,19 +160,67 @@ namespace DustlineArena.Runtime.Weapons
 
         public void Equip(WeaponConfig weaponConfig)
         {
-            if (weaponConfig == null)
+            if (weaponConfig == null || weaponConfig.Visual == WeaponVisualId.Grenade)
             {
                 return;
             }
 
+            if (config == weaponConfig && currentAmmo != null)
+            {
+                AddAmmo(weaponConfig.AmmoPerPickup);
+                return;
+            }
+
+            CancelReload();
             config = weaponConfig;
+            currentAmmo = GetOrCreateAmmoState(config);
             nextFireTime = 0f;
+            AmmoChanged?.Invoke();
 
             if (normalizePlayerWeaponPose && ownerTeam != null && ownerTeam.Team == TeamId.Player)
             {
                 NormalizePlayerWeaponPose();
                 EnsurePlayerWeaponAssetModel();
             }
+        }
+
+        private void Update()
+        {
+            if (isReloading && Time.time >= reloadCompleteTime)
+            {
+                CompleteReloadStep();
+            }
+        }
+
+        public bool BeginReload()
+        {
+            if (!CanReload)
+            {
+                return false;
+            }
+
+            isReloading = true;
+            reloadCompleteTime = Time.time + GetReloadStepDuration();
+            ReloadStarted?.Invoke();
+            return true;
+        }
+
+        public bool AddAmmo(int amount)
+        {
+            if (config == null || currentAmmo == null || amount <= 0 || currentAmmo.Reserve >= config.MaxReserveAmmo)
+            {
+                return false;
+            }
+
+            int previous = currentAmmo.Reserve;
+            currentAmmo.Reserve = Mathf.Min(config.MaxReserveAmmo, currentAmmo.Reserve + amount);
+            if (currentAmmo.Reserve == previous)
+            {
+                return false;
+            }
+
+            AmmoChanged?.Invoke();
+            return true;
         }
 
         private void LateUpdate()
@@ -174,26 +265,21 @@ namespace DustlineArena.Runtime.Weapons
 
         public bool TryFire(Vector3 direction)
         {
-            return TryFire(direction, 1f);
-        }
-
-        public bool TryFire(Vector3 direction, float grenadePower)
-        {
             if (!CanFire)
             {
                 return false;
             }
 
-            nextFireTime = Time.time + 1f / config.ShotsPerSecond;
-
-            Vector3 normalizedDirection = direction.normalized;
-            if (config.Visual == WeaponVisualId.Grenade)
+            if (isReloading && UsesIncrementalReload)
             {
-                ThrowGrenade(normalizedDirection, grenadePower);
-                Fired?.Invoke();
-                return true;
+                CancelReload();
             }
 
+            nextFireTime = Time.time + 1f / config.ShotsPerSecond;
+            currentAmmo.Magazine--;
+            AmmoChanged?.Invoke();
+
+            Vector3 normalizedDirection = direction.normalized;
             TeamId team = ownerTeam == null ? TeamId.Neutral : ownerTeam.Team;
             int projectileCount = Mathf.Max(1, config.ProjectilesPerShot);
             for (int i = 0; i < projectileCount; i++)
@@ -209,7 +295,11 @@ namespace DustlineArena.Runtime.Weapons
                 projectile.Initialize(damage, fireDirection, config.ProjectileSpeed, config.ProjectileLifetime, config.HitMask);
             }
 
+            ShellCasingFx.Spawn(muzzle.position, normalizedDirection, config.Visual);
+            CombatVfx.SpawnMuzzleFlash(muzzle, normalizedDirection, config.Visual);
+            PlayRecoilKick();
             Fired?.Invoke();
+            AnyFired?.Invoke(this);
             return true;
         }
 
@@ -231,54 +321,71 @@ namespace DustlineArena.Runtime.Weapons
                 : null;
         }
 
-        public Vector3 GetGrenadeThrowVelocity(Vector3 direction, float power)
+        private AmmoState GetOrCreateAmmoState(WeaponConfig weaponConfig)
         {
-            if (!IsGrenadeEquipped)
+            if (weaponConfig == null)
             {
-                return Vector3.zero;
+                return null;
             }
 
-            float charge = Mathf.Clamp01(power);
-            float forwardSpeed = Mathf.Lerp(config.MinThrowSpeed, config.MaxThrowSpeed, charge);
-            float upwardSpeed = Mathf.Lerp(
-                config.MinThrowUpwardSpeed,
-                config.MaxThrowUpwardSpeed,
-                charge);
-            return direction.normalized * forwardSpeed + Vector3.up * upwardSpeed;
+            if (ammoStates.TryGetValue(weaponConfig, out AmmoState state))
+            {
+                return state;
+            }
+
+            state = new AmmoState
+            {
+                Magazine = weaponConfig.MagazineSize,
+                Reserve = weaponConfig.StartingReserveAmmo
+            };
+            ammoStates.Add(weaponConfig, state);
+            return state;
         }
 
-        private void ThrowGrenade(Vector3 direction, float power)
+        private void CompleteReloadStep()
         {
-            GameObject grenadeRoot = new GameObject("Thrown_Grenade");
-            grenadeRoot.transform.position = muzzle.position;
-            grenadeRoot.transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+            if (config == null || currentAmmo == null)
+            {
+                isReloading = false;
+                return;
+            }
 
-            GameObject visual = Instantiate(config.ThrownPrefab, grenadeRoot.transform);
-            visual.name = "Grenade_Visual";
-            visual.transform.localPosition = Vector3.zero;
-            visual.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
-            visual.transform.localScale = Vector3.one * 38f;
+            int needed = Mathf.Max(0, config.MagazineSize - currentAmmo.Magazine);
+            int loaded = UsesIncrementalReload ? Mathf.Min(1, currentAmmo.Reserve, needed) : Mathf.Min(needed, currentAmmo.Reserve);
+            currentAmmo.Magazine += loaded;
+            currentAmmo.Reserve -= loaded;
+            AmmoChanged?.Invoke();
 
-            SphereCollider grenadeCollider = grenadeRoot.AddComponent<SphereCollider>();
-            grenadeCollider.radius = 0.22f;
+            if (UsesIncrementalReload && currentAmmo.Magazine < config.MagazineSize && currentAmmo.Reserve > 0)
+            {
+                reloadCompleteTime = Time.time + GetReloadStepDuration();
+                return;
+            }
 
-            Rigidbody grenadeBody = grenadeRoot.AddComponent<Rigidbody>();
-            grenadeBody.mass = 0.45f;
-            grenadeBody.drag = 0.05f;
-            grenadeBody.angularDrag = 0.05f;
-            grenadeBody.interpolation = RigidbodyInterpolation.Interpolate;
-            grenadeBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            isReloading = false;
+            reloadCompleteTime = 0f;
+            ReloadCompleted?.Invoke();
+        }
 
-            TeamId team = ownerTeam == null ? TeamId.Neutral : ownerTeam.Team;
-            DamageInfo damage = new DamageInfo(config.Damage, gameObject, team, muzzle.position, direction);
-            GrenadeProjectile grenade = grenadeRoot.AddComponent<GrenadeProjectile>();
-            grenade.Initialize(
-                damage,
-                grenadeBody,
-                GetGrenadeThrowVelocity(direction, power),
-                config.ProjectileLifetime,
-                config.ExplosionRadius,
-                config.HitMask);
+        private void CancelReload()
+        {
+            isReloading = false;
+            reloadCompleteTime = 0f;
+        }
+
+        private float GetReloadStepDuration()
+        {
+            if (config == null)
+            {
+                return 0.05f;
+            }
+
+            if (!UsesIncrementalReload)
+            {
+                return config.ReloadDuration;
+            }
+
+            return Mathf.Max(0.05f, config.ReloadDuration / Mathf.Max(1, config.MagazineSize));
         }
 
         private void NormalizePlayerWeaponPose()
@@ -308,24 +415,74 @@ namespace DustlineArena.Runtime.Weapons
         {
             if (!usingSocket)
             {
-                transform.localPosition = GetPlayerWeaponLocalPosition();
-                transform.localRotation = Quaternion.Euler(playerWeaponLocalEuler);
+                transform.localPosition = GetPlayerWeaponLocalPosition() + recoilLocalOffset;
+                transform.localRotation = Quaternion.Euler(playerWeaponLocalEuler) * Quaternion.Euler(recoilLocalEuler);
                 return;
             }
 
             if (!keepPlayerWeaponLevel || ownerTeam == null)
             {
-                transform.localPosition = socketLocalPosition;
-                transform.localRotation = Quaternion.Euler(socketLocalEuler);
+                transform.localPosition = socketLocalPosition + recoilLocalOffset;
+                transform.localRotation = Quaternion.Euler(socketLocalEuler) * Quaternion.Euler(recoilLocalEuler);
                 return;
             }
 
             Transform ownerRoot = ownerTeam.transform;
             transform.position = weaponSocket.position
-                + ownerRoot.right * socketLocalPosition.x
-                + ownerRoot.up * socketLocalPosition.y
-                + ownerRoot.forward * socketLocalPosition.z;
-            transform.rotation = ownerRoot.rotation * Quaternion.Euler(socketLocalEuler);
+                + ownerRoot.right * (socketLocalPosition.x + recoilLocalOffset.x)
+                + ownerRoot.up * (socketLocalPosition.y + recoilLocalOffset.y)
+                + ownerRoot.forward * (socketLocalPosition.z + recoilLocalOffset.z);
+            transform.rotation = ownerRoot.rotation * Quaternion.Euler(socketLocalEuler) * Quaternion.Euler(recoilLocalEuler);
+        }
+
+        private void PlayRecoilKick()
+        {
+            if (ownerTeam == null || ownerTeam.Team != TeamId.Player)
+            {
+                return;
+            }
+
+            WeaponFeelProfile profile = GetFeelProfile();
+            DOTween.Kill(this);
+
+            recoilLocalOffset = new Vector3(
+                UnityEngine.Random.Range(-profile.sideKick, profile.sideKick),
+                profile.upKick,
+                -profile.backKick);
+            recoilLocalEuler = new Vector3(
+                -profile.pitchKick,
+                UnityEngine.Random.Range(-profile.yawKick, profile.yawKick),
+                UnityEngine.Random.Range(-profile.rollKick, profile.rollKick));
+
+            RefreshPlayerWeaponPose();
+
+            Sequence sequence = DOTween.Sequence()
+                .SetTarget(this);
+            sequence.AppendInterval(profile.holdTime);
+            sequence.Append(DOTween.To(() => recoilLocalOffset, value => recoilLocalOffset = value, Vector3.zero, profile.returnTime)
+                .SetEase(Ease.OutCubic));
+            sequence.Join(DOTween.To(() => recoilLocalEuler, value => recoilLocalEuler = value, Vector3.zero, profile.returnTime)
+                .SetEase(Ease.OutCubic));
+        }
+
+        private WeaponFeelProfile GetFeelProfile()
+        {
+            if (config == null)
+            {
+                return WeaponFeelProfile.Default;
+            }
+
+            switch (config.Visual)
+            {
+                case WeaponVisualId.Pistol:
+                    return new WeaponFeelProfile(0.055f, 0.012f, 0.01f, 4.5f, 0.45f, 0.9f, 0.015f, 0.105f);
+                case WeaponVisualId.SMG:
+                    return new WeaponFeelProfile(0.035f, 0.008f, 0.008f, 2.7f, 0.65f, 0.65f, 0.005f, 0.075f);
+                case WeaponVisualId.Shotgun:
+                    return new WeaponFeelProfile(0.105f, 0.025f, 0.018f, 7.5f, 0.8f, 1.25f, 0.025f, 0.16f);
+                default:
+                    return new WeaponFeelProfile(0.065f, 0.014f, 0.012f, 4.2f, 0.55f, 0.9f, 0.01f, 0.1f);
+            }
         }
 
         private void EnsurePlayerWeaponAssetModel()
@@ -440,7 +597,13 @@ namespace DustlineArena.Runtime.Weapons
 
         private void HideOnOwnerDeath()
         {
+            CancelReload();
             SetWeaponVisible(false);
+        }
+
+        private void OnDestroy()
+        {
+            DOTween.Kill(this);
         }
 
         private void SetWeaponVisible(bool visible)
@@ -600,6 +763,12 @@ namespace DustlineArena.Runtime.Weapons
             return Quaternion.AngleAxis(yaw, Vector3.up) * direction;
         }
 
+        private sealed class AmmoState
+        {
+            public int Magazine;
+            public int Reserve;
+        }
+
         private readonly struct WeaponVisualProfile
         {
             public readonly WeaponVisualId visual;
@@ -626,6 +795,40 @@ namespace DustlineArena.Runtime.Weapons
                 this.muzzlePosition = muzzlePosition;
                 this.leftHandGrip = leftHandGrip;
                 this.usesLeftHand = usesLeftHand;
+            }
+        }
+
+        private readonly struct WeaponFeelProfile
+        {
+            public static readonly WeaponFeelProfile Default = new WeaponFeelProfile(0.055f, 0.012f, 0.01f, 4f, 0.5f, 0.8f, 0.01f, 0.1f);
+
+            public readonly float backKick;
+            public readonly float upKick;
+            public readonly float sideKick;
+            public readonly float pitchKick;
+            public readonly float yawKick;
+            public readonly float rollKick;
+            public readonly float holdTime;
+            public readonly float returnTime;
+
+            public WeaponFeelProfile(
+                float backKick,
+                float upKick,
+                float sideKick,
+                float pitchKick,
+                float yawKick,
+                float rollKick,
+                float holdTime,
+                float returnTime)
+            {
+                this.backKick = backKick;
+                this.upKick = upKick;
+                this.sideKick = sideKick;
+                this.pitchKick = pitchKick;
+                this.yawKick = yawKick;
+                this.rollKick = rollKick;
+                this.holdTime = holdTime;
+                this.returnTime = returnTime;
             }
         }
     }

@@ -605,21 +605,6 @@ namespace DustlineArena.Editor
                 5.5f,
                 projectile,
                 null);
-            GameObject grenadeModel = AssetDatabase.LoadAssetAtPath<GameObject>(
-                $"{WeaponFolderPath}/Grenade.fbx");
-            CreateOrUpdateWeaponConfig(
-                "GrenadeWeaponConfig",
-                WeaponVisualId.Grenade,
-                85f,
-                0.55f,
-                9.5f,
-                1.8f,
-                0f,
-                1,
-                3.2f,
-                5.5f,
-                projectile,
-                grenadeModel);
             return pistol;
         }
 
@@ -661,6 +646,31 @@ namespace DustlineArena.Editor
             serializedConfig.FindProperty("minThrowUpwardSpeed").floatValue = isGrenade ? 3.4f : 3.5f;
             serializedConfig.FindProperty("maxThrowUpwardSpeed").floatValue = isGrenade ? 7.5f : 7f;
             serializedConfig.FindProperty("throwChargeDuration").floatValue = isGrenade ? 1.4f : 1.25f;
+            int magazineSize = visual == WeaponVisualId.SMG ? 36
+                : visual == WeaponVisualId.Pistol ? 12
+                : visual == WeaponVisualId.Shotgun ? 8
+                : 30;
+            int startingReserve = visual == WeaponVisualId.SMG ? 108
+                : visual == WeaponVisualId.Pistol ? 48
+                : visual == WeaponVisualId.Shotgun ? 24
+                : 90;
+            int maximumReserve = visual == WeaponVisualId.SMG ? 144
+                : visual == WeaponVisualId.Pistol ? 72
+                : visual == WeaponVisualId.Shotgun ? 40
+                : 120;
+            float reloadDuration = visual == WeaponVisualId.SMG ? 1.45f
+                : visual == WeaponVisualId.Pistol ? 1.25f
+                : visual == WeaponVisualId.Shotgun ? 2.1f
+                : 1.65f;
+            int pickupAmmo = visual == WeaponVisualId.SMG ? 36
+                : visual == WeaponVisualId.Pistol ? 18
+                : visual == WeaponVisualId.Shotgun ? 8
+                : 30;
+            serializedConfig.FindProperty("magazineSize").intValue = magazineSize;
+            serializedConfig.FindProperty("startingReserveAmmo").intValue = startingReserve;
+            serializedConfig.FindProperty("maxReserveAmmo").intValue = maximumReserve;
+            serializedConfig.FindProperty("reloadDuration").floatValue = reloadDuration;
+            serializedConfig.FindProperty("ammoPerPickup").intValue = pickupAmmo;
             if (projectile != null)
             {
                 serializedConfig.FindProperty("projectilePrefab").objectReferenceValue = projectile;

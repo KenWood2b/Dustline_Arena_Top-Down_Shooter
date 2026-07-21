@@ -568,16 +568,14 @@ namespace DustlineArena.Editor
                 AssetDatabase.LoadAssetAtPath<WeaponConfig>(Configs + "/AKWeaponConfig.asset"),
                 AssetDatabase.LoadAssetAtPath<WeaponConfig>(Configs + "/SMGWeaponConfig.asset"),
                 AssetDatabase.LoadAssetAtPath<WeaponConfig>(Configs + "/PistolWeaponConfig.asset"),
-                AssetDatabase.LoadAssetAtPath<WeaponConfig>(Configs + "/ShotgunWeaponConfig.asset"),
-                AssetDatabase.LoadAssetAtPath<WeaponConfig>(Configs + "/GrenadeWeaponConfig.asset")
+                AssetDatabase.LoadAssetAtPath<WeaponConfig>(Configs + "/ShotgunWeaponConfig.asset")
             };
             GameObject[] models =
             {
                 AssetDatabase.LoadAssetAtPath<GameObject>(Art + "/Weapons/AK.fbx"),
                 AssetDatabase.LoadAssetAtPath<GameObject>(Art + "/Weapons/SMG.fbx"),
                 AssetDatabase.LoadAssetAtPath<GameObject>(Art + "/Weapons/Pistol.fbx"),
-                AssetDatabase.LoadAssetAtPath<GameObject>(Art + "/Weapons/Shotgun.fbx"),
-                AssetDatabase.LoadAssetAtPath<GameObject>(Art + "/Weapons/Grenade.fbx")
+                AssetDatabase.LoadAssetAtPath<GameObject>(Art + "/Weapons/Shotgun.fbx")
             };
 
             WeaponPickupRingSpawner ringSpawner = parent.gameObject.AddComponent<WeaponPickupRingSpawner>();
