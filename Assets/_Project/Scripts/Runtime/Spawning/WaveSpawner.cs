@@ -7,6 +7,7 @@ using DustlineArena.Runtime.Health;
 using DustlineArena.Runtime.Navigation;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 
 namespace DustlineArena.Runtime.Spawning
 {
@@ -25,6 +26,11 @@ namespace DustlineArena.Runtime.Spawning
         [SerializeField, Min(0.25f)] private float navMeshMissingGraceTime = 2.5f;
         [SerializeField, Min(0f)] private float spawnScatterRadius = 3f;
         [SerializeField, Range(0f, 0.75f)] private float spawnIntervalJitter = 0.35f;
+        [SerializeField] private bool scaleDifficultyByArenaIndex = true;
+        [SerializeField, Min(0f)] private float enemyCountScalePerArena = 0.12f;
+        [SerializeField, Min(0)] private int bonusEnemiesPerArena = 1;
+        [SerializeField, Range(0.65f, 1f)] private float spawnIntervalScalePerArena = 0.92f;
+        [SerializeField, Min(0.2f)] private float minimumScaledSpawnInterval = 0.32f;
 
 #if UNITY_EDITOR
         [Header("Editor Stress Test")]
@@ -46,6 +52,7 @@ namespace DustlineArena.Runtime.Spawning
         private readonly List<HealthComponent> staleEnemies = new List<HealthComponent>();
         private readonly List<int> spawnCandidates = new List<int>();
         private UnityEngine.Camera spawnCamera;
+        private int arenaDifficultyIndex = 1;
 
         public event Action<int> WaveStarted;
         public event Action<int> WaveCompleted;
@@ -58,6 +65,12 @@ namespace DustlineArena.Runtime.Spawning
         public string CurrentWaveName => GetWaveName(waveIndex);
         public int ActiveEnemyCount => aliveEnemies.Count;
         public int TotalKills { get; private set; }
+
+        private void Awake()
+        {
+            SanitizeDifficultySettings();
+            arenaDifficultyIndex = GetArenaDifficultyIndex(SceneManager.GetActiveScene().name);
+        }
 
         private void Start()
         {
@@ -142,7 +155,7 @@ namespace DustlineArena.Runtime.Spawning
                 for (waveIndex = 0; waveIndex < waves.Length; waveIndex++)
                 {
                     WaveConfig wave = waves[waveIndex];
-                    if (wave == null || wave.EnemyPrefab == null)
+                    if (wave == null || !wave.HasEnemyPrefab)
                     {
                         continue;
                     }
@@ -154,7 +167,8 @@ namespace DustlineArena.Runtime.Spawning
                     float spawnInterval = GetSpawnInterval(wave);
                     for (int i = 0; i < enemyCount; i++)
                     {
-                        if (!SpawnEnemy(wave.EnemyPrefab))
+                        GameObject enemyPrefab = wave.GetEnemyPrefab();
+                        if (enemyPrefab == null || !SpawnEnemy(enemyPrefab))
                         {
                             Debug.LogWarning($"Dustline Arena: failed to spawn enemy {i + 1}/{enemyCount} for wave {waveIndex + 1}.", this);
                         }
@@ -550,7 +564,9 @@ namespace DustlineArena.Runtime.Spawning
                 return Mathf.Clamp(editorEnemyCount, 1, 500);
             }
 #endif
-            return wave.EnemyCount;
+            int arenaStep = GetArenaDifficultyStep();
+            int scaledCount = Mathf.RoundToInt(wave.EnemyCount * (1f + arenaStep * enemyCountScalePerArena));
+            return Mathf.Max(1, scaledCount + arenaStep * bonusEnemiesPerArena);
         }
 
         private float GetSpawnInterval(WaveConfig wave)
@@ -561,7 +577,34 @@ namespace DustlineArena.Runtime.Spawning
                 return Mathf.Max(0f, editorSpawnInterval);
             }
 #endif
-            return wave.SpawnInterval;
+            int arenaStep = GetArenaDifficultyStep();
+            float scaledInterval = wave.SpawnInterval * Mathf.Pow(spawnIntervalScalePerArena, arenaStep);
+            return Mathf.Max(minimumScaledSpawnInterval, scaledInterval);
+        }
+
+        private int GetArenaDifficultyStep()
+        {
+            return scaleDifficultyByArenaIndex ? Mathf.Max(0, arenaDifficultyIndex - 1) : 0;
+        }
+
+        private void SanitizeDifficultySettings()
+        {
+            enemyCountScalePerArena = Mathf.Max(0f, enemyCountScalePerArena);
+            bonusEnemiesPerArena = Mathf.Max(0, bonusEnemiesPerArena);
+            spawnIntervalScalePerArena = Mathf.Clamp(spawnIntervalScalePerArena <= 0f ? 0.92f : spawnIntervalScalePerArena, 0.65f, 1f);
+            minimumScaledSpawnInterval = Mathf.Max(0.2f, minimumScaledSpawnInterval <= 0f ? 0.32f : minimumScaledSpawnInterval);
+        }
+
+        private static int GetArenaDifficultyIndex(string sceneName)
+        {
+            const string prefix = "Dustline_Arena_";
+            if (string.IsNullOrWhiteSpace(sceneName) || !sceneName.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                return 1;
+            }
+
+            string indexText = sceneName.Substring(prefix.Length);
+            return int.TryParse(indexText, out int index) ? Mathf.Max(1, index) : 1;
         }
 
         private IEnumerator WaitForNavMesh()

@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 493660ba660f38043b2f5c7d118c4952, type: 3}
-  m_Name: EnemyConfig
+  m_Name: EnemyConfig_Bruiser
   m_EditorClassIdentifier: 
-  moveSpeed: 4.5
-  acceleration: 28
-  attackRange: 1.35
-  attackDamage: 12
-  attackCooldown: 0.75
+  moveSpeed: 4.2
+  acceleration: 26
+  attackRange: 1.45
+  attackDamage: 16
+  attackCooldown: 0.65
   useChaseBurst: 0
-  chaseBurstSpeedMultiplier: 1.25
-  chaseBurstDuration: 0.45
+  chaseBurstSpeedMultiplier: 1.15
+  chaseBurstDuration: 0.35
   chaseBurstCooldown: 2.2
   chaseBurstMinDistance: 4.5

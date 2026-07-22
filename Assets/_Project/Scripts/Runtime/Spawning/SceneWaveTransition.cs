@@ -18,6 +18,9 @@ namespace DustlineArena.Runtime.Spawning
         private bool loading;
 
         public string NextSceneName => nextSceneName;
+        public float LoadDelay => loadDelay;
+        public bool IsLoading => loading;
+        public bool HasNextScene => !string.IsNullOrWhiteSpace(nextSceneName);
 
         public void Configure(WaveSpawner spawner, string sceneName, float delay)
         {

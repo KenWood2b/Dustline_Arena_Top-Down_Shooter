@@ -20,6 +20,11 @@ namespace DustlineArena.Runtime.Camera
 
         private void LateUpdate()
         {
+            if (Time.timeScale <= 0f)
+            {
+                return;
+            }
+
             if (target == null)
             {
                 return;

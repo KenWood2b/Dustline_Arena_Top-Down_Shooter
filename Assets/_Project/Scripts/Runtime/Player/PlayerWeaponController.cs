@@ -38,6 +38,11 @@ namespace DustlineArena.Runtime.Player
 
         private void Update()
         {
+            if (Time.timeScale <= 0f)
+            {
+                return;
+            }
+
             if (health != null && !health.IsAlive)
             {
                 return;

@@ -27,16 +27,9 @@ namespace DustlineArena.Runtime.Player
 
         private void Update()
         {
-            if (health != null && !health.IsAlive)
+            if (Time.timeScale <= 0f || health != null && !health.IsAlive)
             {
-                Move = Vector2.zero;
-                FireHeld = false;
-                FirePressed = false;
-                FireReleased = false;
-                ReloadPressed = false;
-                GrenadeHeld = false;
-                GrenadePressed = false;
-                GrenadeReleased = false;
+                ClearInput();
                 return;
             }
 
@@ -50,6 +43,18 @@ namespace DustlineArena.Runtime.Player
             GrenadeHeld = Input.GetKey(KeyCode.G) || Input.GetMouseButton(1);
             GrenadePressed = Input.GetKeyDown(KeyCode.G) || Input.GetMouseButtonDown(1);
             GrenadeReleased = !GrenadeHeld && (Input.GetKeyUp(KeyCode.G) || Input.GetMouseButtonUp(1));
+        }
+
+        private void ClearInput()
+        {
+            Move = Vector2.zero;
+            FireHeld = false;
+            FirePressed = false;
+            FireReleased = false;
+            ReloadPressed = false;
+            GrenadeHeld = false;
+            GrenadePressed = false;
+            GrenadeReleased = false;
         }
     }
 }

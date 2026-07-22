@@ -40,6 +40,8 @@ namespace DustlineArena.Runtime.Enemies
         private float nextDestinationRefreshTime;
         private float nextAttackTime;
         private float attackMovementLockedUntil;
+        private float chaseBurstUntil;
+        private float nextChaseBurstTime;
         private Vector3 approachOffset;
         private int attackSlotIndex = -1;
 
@@ -78,6 +80,8 @@ namespace DustlineArena.Runtime.Enemies
             nextDestinationRefreshTime = 0f;
             nextAttackTime = 0f;
             attackMovementLockedUntil = 0f;
+            chaseBurstUntil = 0f;
+            nextChaseBurstTime = Time.time + UnityEngine.Random.Range(0f, 0.6f);
             lastDestination = new Vector3(float.PositiveInfinity, 0f, float.PositiveInfinity);
             RollApproachOffset();
             RollAvoidancePriority();
@@ -112,6 +116,7 @@ namespace DustlineArena.Runtime.Enemies
             ConfigureAgentIfNeeded();
             if (IsAttackMovementLocked())
             {
+                ApplyMovementSpeed(1f);
                 StopMoving();
                 FaceTarget();
                 return;
@@ -157,6 +162,45 @@ namespace DustlineArena.Runtime.Enemies
             configuredConfig = config;
         }
 
+        private void UpdateChaseBurst(float targetDistance)
+        {
+            if (agent == null || config == null || !config.UseChaseBurst)
+            {
+                ApplyMovementSpeed(1f);
+                return;
+            }
+
+            if (Time.time < chaseBurstUntil)
+            {
+                ApplyMovementSpeed(config.ChaseBurstSpeedMultiplier);
+                return;
+            }
+
+            ApplyMovementSpeed(1f);
+            if (targetDistance < config.ChaseBurstMinDistance || Time.time < nextChaseBurstTime)
+            {
+                return;
+            }
+
+            chaseBurstUntil = Time.time + config.ChaseBurstDuration;
+            nextChaseBurstTime = chaseBurstUntil
+                + config.ChaseBurstCooldown
+                + UnityEngine.Random.Range(0f, config.ChaseBurstCooldown * 0.25f);
+            ApplyMovementSpeed(config.ChaseBurstSpeedMultiplier);
+        }
+
+        private void ApplyMovementSpeed(float multiplier)
+        {
+            if (agent == null || config == null)
+            {
+                return;
+            }
+
+            float speedMultiplier = Mathf.Max(1f, multiplier);
+            agent.speed = config.MoveSpeed * speedMultiplier;
+            agent.acceleration = config.Acceleration * (speedMultiplier > 1f ? 1.25f : 1f);
+        }
+
         private void RollAvoidancePriority()
         {
             if (agent == null)
@@ -178,12 +222,15 @@ namespace DustlineArena.Runtime.Enemies
             }
 
             Vector3 toTarget = GetPlanarAttackOffset();
-            if (toTarget.magnitude <= config.AttackRange * 0.85f)
+            float targetDistance = toTarget.magnitude;
+            if (targetDistance <= config.AttackRange * 0.85f)
             {
+                ApplyMovementSpeed(1f);
                 StopMoving();
                 return;
             }
 
+            UpdateChaseBurst(targetDistance);
             agent.isStopped = false;
             Vector3 destination = GetApproachDestination();
             if (Time.time < nextDestinationRefreshTime

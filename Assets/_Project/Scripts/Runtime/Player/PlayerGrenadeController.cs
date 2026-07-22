@@ -66,6 +66,11 @@ namespace DustlineArena.Runtime.Player
 
         private void Update()
         {
+            if (Time.timeScale <= 0f)
+            {
+                return;
+            }
+
             if (config == null || inputReader == null || aimController == null || weapon == null)
             {
                 return;

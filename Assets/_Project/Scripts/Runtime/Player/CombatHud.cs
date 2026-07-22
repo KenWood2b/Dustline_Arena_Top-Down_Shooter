@@ -19,6 +19,7 @@ namespace DustlineArena.Runtime.Player
         [SerializeField] private ProjectileWeapon weapon;
         [SerializeField] private PlayerGrenadeController grenades;
         [SerializeField] private WaveSpawner waveSpawner;
+        [SerializeField] private SceneWaveTransition sceneTransition;
         [SerializeField] private MouseAimController aimController;
         [SerializeField] private UnityEngine.Camera targetCamera;
         [SerializeField] private TopDownCameraFollow cameraFollow;
@@ -46,6 +47,12 @@ namespace DustlineArena.Runtime.Player
         private TMP_Text healthDeltaValue;
         private TMP_Text bannerTitle;
         private TMP_Text bannerSubtitle;
+        private TMP_Text clearTitle;
+        private TMP_Text clearSubtitle;
+        private TMP_Text clearCountdown;
+        private TMP_Text pauseTitle;
+        private TMP_Text pauseSubtitle;
+        private TMP_Text pauseHint;
         private TMP_Text deathTitle;
         private TMP_Text deathSubtitle;
         private RectTransform reloadGroup;
@@ -62,11 +69,15 @@ namespace DustlineArena.Runtime.Player
         private RectTransform crosshairRight;
         private RectTransform hitMarkerRoot;
         private RectTransform bannerRoot;
+        private RectTransform pauseRoot;
+        private RectTransform clearRoot;
         private RectTransform deathRoot;
         private CanvasGroup crosshairGroup;
         private CanvasGroup hitMarkerGroup;
         private CanvasGroup healthDeltaGroup;
         private CanvasGroup bannerGroup;
+        private CanvasGroup pauseGroup;
+        private CanvasGroup clearGroup;
         private CanvasGroup deathGroup;
         private GameObject hudRoot;
         private float nextWorldRefresh;
@@ -78,6 +89,11 @@ namespace DustlineArena.Runtime.Player
         private int lastWaveIndex = int.MinValue;
         private float crosshairFireBloom;
         private bool isGameOver;
+        private bool isLevelComplete;
+        private bool isPaused;
+        private float prePauseTimeScale = 1f;
+        private float levelCompleteEndTime;
+        private string levelCompleteNextScene;
         private bool cursorWasVisible;
 
         private void Awake()
@@ -87,6 +103,8 @@ namespace DustlineArena.Runtime.Player
             weapon = weapon == null ? GetComponentInChildren<ProjectileWeapon>() : weapon;
             grenades = grenades == null ? GetComponent<PlayerGrenadeController>() : grenades;
             waveSpawner = waveSpawner == null ? FindObjectOfType<WaveSpawner>() : waveSpawner;
+            sceneTransition = sceneTransition == null && waveSpawner != null ? waveSpawner.GetComponent<SceneWaveTransition>() : sceneTransition;
+            sceneTransition = sceneTransition == null ? FindObjectOfType<SceneWaveTransition>() : sceneTransition;
             aimController = aimController == null ? GetComponent<MouseAimController>() : aimController;
             targetCamera = targetCamera == null ? UnityEngine.Camera.main : targetCamera;
             cameraFollow = cameraFollow == null && targetCamera != null ? targetCamera.GetComponent<TopDownCameraFollow>() : cameraFollow;
@@ -142,6 +160,11 @@ namespace DustlineArena.Runtime.Player
 
         private void OnDisable()
         {
+            if (isPaused)
+            {
+                SetPaused(false);
+            }
+
             Cursor.visible = cursorWasVisible;
             KillHudTweens();
 
@@ -190,7 +213,29 @@ namespace DustlineArena.Runtime.Player
             {
                 if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
                 {
-                    SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+                    RestartCurrentScene();
+                }
+
+                return;
+            }
+
+            if (isLevelComplete)
+            {
+                RefreshLevelCompleteOverlay();
+                return;
+            }
+
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                SetPaused(!isPaused);
+                return;
+            }
+
+            if (isPaused)
+            {
+                if (Input.GetKeyDown(KeyCode.R))
+                {
+                    RestartCurrentScene();
                 }
 
                 return;
@@ -562,6 +607,115 @@ namespace DustlineArena.Runtime.Player
                 new Vector2(0f, -42f));
             bannerSubtitle = DustlineUiTheme.AddText(bannerSubtitleRect, "SURVIVE", 18f, DustlineUiTheme.Text, TextAlignmentOptions.Center, FontStyles.Bold);
 
+            pauseRoot = DustlineUiTheme.CreateRect(
+                "Pause_Overlay",
+                parent,
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero);
+            DustlineUiTheme.AddImage(pauseRoot, null, new Color(0.012f, 0.014f, 0.018f, 0.68f), false);
+            pauseGroup = pauseRoot.gameObject.AddComponent<CanvasGroup>();
+            pauseGroup.alpha = 0f;
+            pauseGroup.blocksRaycasts = false;
+            pauseGroup.interactable = false;
+
+            RectTransform pausePanel = DustlineUiTheme.CreateRect(
+                "Panel",
+                pauseRoot,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(520f, 238f),
+                Vector2.zero);
+            DustlineUiTheme.AddImage(pausePanel, "PanelDark", DustlineUiTheme.Background, true);
+            AddAccent(pausePanel);
+
+            RectTransform pauseTitleRect = DustlineUiTheme.CreateRect(
+                "Title",
+                pausePanel,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(440f, 58f),
+                new Vector2(0f, 54f));
+            pauseTitle = DustlineUiTheme.AddText(pauseTitleRect, "PAUSED", 42f, DustlineUiTheme.Gold, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            RectTransform pauseSubtitleRect = DustlineUiTheme.CreateRect(
+                "Subtitle",
+                pausePanel,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(440f, 30f),
+                new Vector2(0f, 6f));
+            pauseSubtitle = DustlineUiTheme.AddText(pauseSubtitleRect, "TAKE A BREATH", 20f, DustlineUiTheme.Text, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            RectTransform pauseHintRect = DustlineUiTheme.CreateRect(
+                "Hint",
+                pausePanel,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(440f, 28f),
+                new Vector2(0f, -56f));
+            pauseHint = DustlineUiTheme.AddText(pauseHintRect, "ESC  RESUME     R  RESTART", 18f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            clearRoot = DustlineUiTheme.CreateRect(
+                "Area_Clear_Overlay",
+                parent,
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero);
+            DustlineUiTheme.AddImage(clearRoot, null, new Color(0.012f, 0.016f, 0.018f, 0.78f), false);
+            clearGroup = clearRoot.gameObject.AddComponent<CanvasGroup>();
+            clearGroup.alpha = 0f;
+            clearGroup.blocksRaycasts = false;
+            clearGroup.interactable = false;
+
+            RectTransform clearAccent = DustlineUiTheme.CreateRect(
+                "Accent",
+                clearRoot,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(360f, 5f),
+                new Vector2(0f, 108f));
+            DustlineUiTheme.AddImage(clearAccent, "AccentGold", DustlineUiTheme.Gold, true);
+
+            RectTransform clearTitleRect = DustlineUiTheme.CreateRect(
+                "Title",
+                clearRoot,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(760f, 92f),
+                new Vector2(0f, 48f));
+            clearTitle = DustlineUiTheme.AddText(clearTitleRect, "AREA CLEARED", 64f, DustlineUiTheme.Gold, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            RectTransform clearSubtitleRect = DustlineUiTheme.CreateRect(
+                "Subtitle",
+                clearRoot,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(820f, 36f),
+                new Vector2(0f, -22f));
+            clearSubtitle = DustlineUiTheme.AddText(clearSubtitleRect, "ALL WAVES COMPLETE", 24f, DustlineUiTheme.Text, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            RectTransform clearCountdownRect = DustlineUiTheme.CreateRect(
+                "Countdown",
+                clearRoot,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(560f, 32f),
+                new Vector2(0f, -72f));
+            clearCountdown = DustlineUiTheme.AddText(clearCountdownRect, "DEPLOYING...", 22f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
+
             deathRoot = DustlineUiTheme.CreateRect(
                 "Death_Overlay",
                 parent,
@@ -754,21 +908,20 @@ namespace DustlineArena.Runtime.Player
 
             weaponName.text = weapon.Config.Visual.ToString().ToUpperInvariant();
             ConfigureWeaponIcon(weapon.Config.Visual);
-            magazineValue.text = weapon.AmmoInMagazine.ToString("00");
-            reserveValue.text = weapon.ReserveAmmo.ToString("000");
-            magazineValue.color = GetAmmoColor(weapon.AmmoInMagazine, weapon.Config.MagazineSize);
-            if (lastMagazine != int.MinValue && lastMagazine != weapon.AmmoInMagazine)
-            {
-                PunchText(magazineValue, new Vector3(0.14f, 0.14f, 0f), 0.14f);
-            }
+            int currentMagazine = weapon.AmmoInMagazine;
+            int currentReserve = weapon.ReserveAmmo;
+            ResetTextScale(magazineValue);
+            magazineValue.text = currentMagazine.ToString("00");
+            reserveValue.text = currentReserve.ToString("000");
+            magazineValue.color = GetAmmoColor(currentMagazine, weapon.Config.MagazineSize);
 
-            if (lastReserve != int.MinValue && lastReserve != weapon.ReserveAmmo)
+            if (lastReserve != int.MinValue && lastReserve != currentReserve)
             {
                 PunchText(reserveValue, new Vector3(0.1f, 0.1f, 0f), 0.14f);
             }
 
-            lastMagazine = weapon.AmmoInMagazine;
-            lastReserve = weapon.ReserveAmmo;
+            lastMagazine = currentMagazine;
+            lastReserve = currentReserve;
             RefreshReload();
         }
 
@@ -870,7 +1023,7 @@ namespace DustlineArena.Runtime.Player
         private void OnAllWavesCompleted()
         {
             RefreshWave();
-            ShowBanner("AREA CLEARED", "ALL WAVES COMPLETE");
+            ShowLevelCompleteOverlay();
         }
 
         private void OnAnyDamaged(HealthComponent target, DamageInfo damage)
@@ -1087,6 +1240,180 @@ namespace DustlineArena.Runtime.Player
                 .SetEase(Ease.InQuad));
         }
 
+        private void ShowLevelCompleteOverlay()
+        {
+            if (isGameOver || clearRoot == null || clearGroup == null || clearTitle == null || clearSubtitle == null || clearCountdown == null)
+            {
+                ShowBanner("AREA CLEARED", "ALL WAVES COMPLETE");
+                return;
+            }
+
+            isLevelComplete = true;
+            sceneTransition = sceneTransition == null && waveSpawner != null ? waveSpawner.GetComponent<SceneWaveTransition>() : sceneTransition;
+            sceneTransition = sceneTransition == null ? FindObjectOfType<SceneWaveTransition>() : sceneTransition;
+
+            bool hasNextScene = sceneTransition != null && sceneTransition.HasNextScene;
+            levelCompleteNextScene = hasNextScene ? sceneTransition.NextSceneName : string.Empty;
+            float delay = hasNextScene ? Mathf.Max(0f, sceneTransition.LoadDelay) : 0f;
+            levelCompleteEndTime = Time.unscaledTime + delay;
+
+            DOTween.Kill(bannerRoot);
+            DOTween.Kill(bannerGroup);
+            if (bannerGroup != null)
+            {
+                bannerGroup.alpha = 0f;
+            }
+
+            clearTitle.text = hasNextScene ? "AREA CLEARED" : "RUN COMPLETE";
+            clearSubtitle.text = hasNextScene
+                ? $"NEXT: {FormatSceneName(levelCompleteNextScene)}"
+                : "ALL AREAS SECURED";
+            RefreshLevelCompleteOverlay();
+
+            DOTween.Kill(clearRoot);
+            DOTween.Kill(clearGroup);
+            clearRoot.localScale = Vector3.one * 1.03f;
+            clearGroup.alpha = 0f;
+
+            Sequence sequence = DOTween.Sequence()
+                .SetUpdate(true)
+                .SetTarget(clearRoot);
+            sequence.Append(DOTween.To(() => clearGroup.alpha, value => clearGroup.alpha = value, 1f, 0.24f)
+                .SetEase(Ease.OutQuad));
+            sequence.Join(DOTween.To(() => clearRoot.localScale, value => clearRoot.localScale = value, Vector3.one, 0.34f)
+                .SetEase(Ease.OutCubic));
+        }
+
+        private void RefreshLevelCompleteOverlay()
+        {
+            if (!isLevelComplete || clearCountdown == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(levelCompleteNextScene))
+            {
+                clearCountdown.text = "PRESS ENTER TO RESTART";
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
+                {
+                    RestartCurrentScene();
+                }
+
+                return;
+            }
+
+            float remaining = Mathf.Max(0f, levelCompleteEndTime - Time.unscaledTime);
+            clearCountdown.text = remaining > 0.05f
+                ? $"DEPLOYING IN {Mathf.CeilToInt(remaining)}"
+                : "DEPLOYING...";
+        }
+
+        private static string FormatSceneName(string sceneName)
+        {
+            const string prefix = "Dustline_Arena_";
+            if (!string.IsNullOrWhiteSpace(sceneName) && sceneName.StartsWith(prefix, System.StringComparison.Ordinal))
+            {
+                return $"ARENA {sceneName.Substring(prefix.Length)}";
+            }
+
+            return string.IsNullOrWhiteSpace(sceneName)
+                ? "NEXT AREA"
+                : sceneName.Replace('_', ' ').ToUpperInvariant();
+        }
+
+        private void SetPaused(bool paused)
+        {
+            if (isPaused == paused || isGameOver || isLevelComplete)
+            {
+                return;
+            }
+
+            isPaused = paused;
+            if (paused)
+            {
+                prePauseTimeScale = Time.timeScale <= 0f ? 1f : Time.timeScale;
+                Time.timeScale = 0f;
+                Cursor.visible = true;
+                ShowPauseOverlay();
+                return;
+            }
+
+            Time.timeScale = prePauseTimeScale <= 0f ? 1f : prePauseTimeScale;
+            if (hideSystemCursor)
+            {
+                Cursor.visible = false;
+            }
+
+            HidePauseOverlay();
+        }
+
+        private void ShowPauseOverlay()
+        {
+            if (pauseRoot == null || pauseGroup == null)
+            {
+                return;
+            }
+
+            if (pauseTitle != null)
+            {
+                pauseTitle.text = "PAUSED";
+            }
+
+            if (pauseSubtitle != null)
+            {
+                pauseSubtitle.text = "TAKE A BREATH";
+            }
+
+            if (pauseHint != null)
+            {
+                pauseHint.text = "ESC  RESUME     R  RESTART";
+            }
+
+            DOTween.Kill(pauseRoot);
+            DOTween.Kill(pauseGroup);
+            pauseRoot.localScale = Vector3.one * 1.025f;
+            pauseGroup.alpha = 0f;
+
+            if (crosshairGroup != null)
+            {
+                crosshairGroup.alpha = 0f;
+            }
+
+            Sequence sequence = DOTween.Sequence()
+                .SetUpdate(true)
+                .SetTarget(pauseRoot);
+            sequence.Append(DOTween.To(() => pauseGroup.alpha, value => pauseGroup.alpha = value, 1f, 0.16f)
+                .SetEase(Ease.OutQuad));
+            sequence.Join(DOTween.To(() => pauseRoot.localScale, value => pauseRoot.localScale = value, Vector3.one, 0.22f)
+                .SetEase(Ease.OutCubic));
+        }
+
+        private void HidePauseOverlay()
+        {
+            if (pauseRoot == null || pauseGroup == null)
+            {
+                return;
+            }
+
+            DOTween.Kill(pauseRoot);
+            DOTween.Kill(pauseGroup);
+            DOTween.To(() => pauseGroup.alpha, value => pauseGroup.alpha = value, 0f, 0.12f)
+                .SetEase(Ease.OutQuad)
+                .SetUpdate(true)
+                .SetTarget(pauseGroup);
+
+            if (crosshairGroup != null)
+            {
+                crosshairGroup.alpha = 0.95f;
+            }
+        }
+
+        private static void RestartCurrentScene()
+        {
+            Time.timeScale = 1f;
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
         private void ShowDeathOverlay()
         {
             if (isGameOver)
@@ -1155,7 +1482,7 @@ namespace DustlineArena.Runtime.Player
         private void OnReloadCompleted()
         {
             RefreshWeapon();
-            PunchText(magazineValue, new Vector3(0.16f, 0.16f, 0f), 0.18f);
+            ResetTextScale(magazineValue);
         }
 
         private void RefreshCrosshair()
@@ -1261,9 +1588,40 @@ namespace DustlineArena.Runtime.Player
                 .SetTarget(this);
         }
 
+        private static void ResetTextScale(TMP_Text text)
+        {
+            if (text == null)
+            {
+                return;
+            }
+
+            text.rectTransform.DOKill();
+            text.rectTransform.localScale = Vector3.one;
+        }
+
         private void KillHudTweens()
         {
             DOTween.Kill(this);
+            if (clearRoot != null)
+            {
+                DOTween.Kill(clearRoot);
+            }
+
+            if (pauseRoot != null)
+            {
+                DOTween.Kill(pauseRoot);
+            }
+
+            if (clearGroup != null)
+            {
+                DOTween.Kill(clearGroup);
+            }
+
+            if (pauseGroup != null)
+            {
+                DOTween.Kill(pauseGroup);
+            }
+
             if (healthFill != null)
             {
                 healthFill.DOKill();
