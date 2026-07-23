@@ -18,6 +18,7 @@ namespace DustlineArena.Runtime.Player
         [SerializeField] private HealthComponent health;
         [SerializeField] private ProjectileWeapon weapon;
         [SerializeField] private PlayerGrenadeController grenades;
+        [SerializeField] private PlayerMotor playerMotor;
         [SerializeField] private WaveSpawner waveSpawner;
         [SerializeField] private SceneWaveTransition sceneTransition;
         [SerializeField] private MouseAimController aimController;
@@ -33,6 +34,7 @@ namespace DustlineArena.Runtime.Player
         private Image healthFill;
         private Image reloadFill;
         private Image grenadeChargeFill;
+        private Image dodgeCooldownFill;
         private Image crosshairDot;
         private Image damageFlash;
         private TMP_Text healthValue;
@@ -42,6 +44,8 @@ namespace DustlineArena.Runtime.Player
         private TMP_Text reloadValue;
         private TMP_Text grenadeValue;
         private TMP_Text grenadeLabel;
+        private TMP_Text dodgeValue;
+        private TMP_Text dodgeLabel;
         private TMP_Text waveValue;
         private TMP_Text enemyValue;
         private TMP_Text healthDeltaValue;
@@ -56,6 +60,7 @@ namespace DustlineArena.Runtime.Player
         private TMP_Text deathTitle;
         private TMP_Text deathSubtitle;
         private RectTransform reloadGroup;
+        private RectTransform dodgeRoot;
         private RectTransform healthDeltaRect;
         private RectTransform iconStock;
         private RectTransform iconReceiver;
@@ -87,6 +92,7 @@ namespace DustlineArena.Runtime.Player
         private int lastGrenadeCount = int.MinValue;
         private int lastActiveEnemies = int.MinValue;
         private int lastWaveIndex = int.MinValue;
+        private bool lastDodgeReady = true;
         private float crosshairFireBloom;
         private bool isGameOver;
         private bool isLevelComplete;
@@ -102,6 +108,7 @@ namespace DustlineArena.Runtime.Player
             health = health == null ? GetComponent<HealthComponent>() : health;
             weapon = weapon == null ? GetComponentInChildren<ProjectileWeapon>() : weapon;
             grenades = grenades == null ? GetComponent<PlayerGrenadeController>() : grenades;
+            playerMotor = playerMotor == null ? GetComponent<PlayerMotor>() : playerMotor;
             waveSpawner = waveSpawner == null ? FindObjectOfType<WaveSpawner>() : waveSpawner;
             sceneTransition = sceneTransition == null && waveSpawner != null ? waveSpawner.GetComponent<SceneWaveTransition>() : sceneTransition;
             sceneTransition = sceneTransition == null ? FindObjectOfType<SceneWaveTransition>() : sceneTransition;
@@ -242,6 +249,7 @@ namespace DustlineArena.Runtime.Player
             }
 
             RefreshReload();
+            RefreshDodgeCooldown();
 
             if (grenadeChargeFill != null)
             {
@@ -287,6 +295,7 @@ namespace DustlineArena.Runtime.Player
 
             BuildVitals(safeArea);
             BuildWeapon(safeArea);
+            BuildDodge(safeArea);
             BuildWave(safeArea);
             BuildCrosshair(safeArea);
             BuildDamageFlash(safeArea);
@@ -403,6 +412,35 @@ namespace DustlineArena.Runtime.Player
             grenadeChargeFill.fillAmount = 0f;
             grenadeChargeFill.raycastTarget = false;
             chargeRingRect.SetAsFirstSibling();
+        }
+
+        private void BuildDodge(RectTransform parent)
+        {
+            dodgeRoot = DustlineUiTheme.CreateRect(
+                "Dodge", parent, Vector2.one, Vector2.one, Vector2.one, new Vector2(250f, 46f), new Vector2(-28f, -202f));
+            dodgeRoot.localScale = Vector3.one * weaponHudScale;
+            DustlineUiTheme.AddImage(dodgeRoot, "PanelDark", DustlineUiTheme.BackgroundSoft, true);
+            AddAccent(dodgeRoot);
+
+            RectTransform labelRect = DustlineUiTheme.CreateRect(
+                "Label", dodgeRoot, Vector2.zero, Vector2.one, new Vector2(0f, 0.5f), new Vector2(128f, 20f), new Vector2(18f, -14f));
+            dodgeLabel = DustlineUiTheme.AddText(labelRect, "DODGE  [SPACE]", 12f, DustlineUiTheme.Muted, TextAlignmentOptions.Left, FontStyles.Bold);
+
+            RectTransform valueRect = DustlineUiTheme.CreateRect(
+                "Value", dodgeRoot, Vector2.one, Vector2.one, Vector2.one, new Vector2(84f, 24f), new Vector2(-16f, -12f));
+            dodgeValue = DustlineUiTheme.AddText(valueRect, "READY", 16f, DustlineUiTheme.Gold, TextAlignmentOptions.Right, FontStyles.Bold);
+
+            RectTransform barBackground = DustlineUiTheme.CreateRect(
+                "Cooldown_Background", dodgeRoot, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0.5f, 0f), new Vector2(-34f, 8f), new Vector2(0f, 8f));
+            DustlineUiTheme.AddImage(barBackground, "PanelDark", new Color(0.015f, 0.018f, 0.022f, 1f), true);
+
+            RectTransform fillRect = DustlineUiTheme.CreateRect(
+                "Cooldown_Fill", barBackground, Vector2.zero, Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(-4f, -4f), Vector2.zero);
+            dodgeCooldownFill = DustlineUiTheme.AddImage(fillRect, "AccentGold", DustlineUiTheme.Gold, false);
+            dodgeCooldownFill.type = Image.Type.Filled;
+            dodgeCooldownFill.fillMethod = Image.FillMethod.Horizontal;
+            dodgeCooldownFill.fillOrigin = (int)Image.OriginHorizontal.Left;
+            dodgeCooldownFill.fillAmount = 1f;
         }
 
         private static RectTransform CreateIconPart(string name, RectTransform parent)
@@ -763,6 +801,7 @@ namespace DustlineArena.Runtime.Player
             RefreshHealth();
             RefreshWeapon();
             RefreshGrenades();
+            RefreshDodgeCooldown();
             RefreshWave();
         }
 
@@ -1000,6 +1039,51 @@ namespace DustlineArena.Runtime.Player
                 grenadeLabel.text = coolingDown ? "COOLDOWN" : "GRENADE  [G]";
                 grenadeLabel.color = coolingDown ? DustlineUiTheme.Danger : DustlineUiTheme.Muted;
             }
+        }
+
+        private void RefreshDodgeCooldown()
+        {
+            if (dodgeRoot == null || dodgeCooldownFill == null)
+            {
+                return;
+            }
+
+            if (playerMotor == null)
+            {
+                dodgeCooldownFill.fillAmount = 0f;
+                if (dodgeValue != null)
+                {
+                    dodgeValue.text = "--";
+                    dodgeValue.color = DustlineUiTheme.Muted;
+                }
+
+                return;
+            }
+
+            float progress = playerMotor.DodgeCooldownProgress01;
+            bool ready = playerMotor.IsDodgeReady;
+            dodgeCooldownFill.fillAmount = progress;
+            dodgeCooldownFill.color = ready
+                ? DustlineUiTheme.Gold
+                : new Color(DustlineUiTheme.Danger.r, DustlineUiTheme.Danger.g, DustlineUiTheme.Danger.b, 0.86f);
+
+            if (dodgeValue != null)
+            {
+                dodgeValue.text = ready ? "READY" : $"{progress * 100f:0}%";
+                dodgeValue.color = ready ? DustlineUiTheme.Gold : DustlineUiTheme.Danger;
+
+                if (!lastDodgeReady && ready)
+                {
+                    PunchText(dodgeValue, new Vector3(0.14f, 0.14f, 0f), 0.16f);
+                }
+            }
+
+            if (dodgeLabel != null)
+            {
+                dodgeLabel.color = ready ? DustlineUiTheme.Muted : DustlineUiTheme.Danger;
+            }
+
+            lastDodgeReady = ready;
         }
 
         private void OnWaveStarted(int index)

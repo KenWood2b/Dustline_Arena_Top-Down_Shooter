@@ -23,61 +23,61 @@ namespace DustlineArena.Editor
                 $"{ConfigFolderPath}/EnemyConfig_Runner.asset",
                 $"{PrefabFolderPath}/Enemy_Chaser_Runner.prefab",
                 $"{MaterialFolderPath}/M_Zombie_Runner.mat",
-                new Color(0.62f, 0.88f, 0.32f),
-                0.9f,
-                65f,
-                8.8f,
-                78f,
+                new Color(0.36f, 0.95f, 0.18f),
+                0.86f,
+                55f,
+                9.8f,
+                96f,
                 1.2f,
-                8f,
-                0.55f,
+                7f,
+                0.5f,
                 true,
-                1.34f,
-                0.62f,
-                1.75f,
-                3.75f,
-                0.36f,
-                1.8f),
+                1.48f,
+                0.55f,
+                1.45f,
+                3f,
+                0.34f,
+                1.72f),
             new VariantSpec(
                 "Bruiser",
                 $"{ConfigFolderPath}/EnemyConfig_Bruiser.asset",
                 $"{PrefabFolderPath}/Enemy_Chaser_Bruiser.prefab",
                 $"{MaterialFolderPath}/M_Zombie_Bruiser.mat",
-                new Color(0.78f, 0.34f, 0.26f),
-                1.08f,
-                175f,
-                4.2f,
-                26f,
+                new Color(0.55f, 0.12f, 0.16f),
+                1.11f,
+                210f,
+                3.9f,
+                22f,
                 1.45f,
-                16f,
-                0.65f,
+                18f,
+                0.72f,
                 false,
                 1.15f,
                 0.35f,
                 2.2f,
                 4.5f,
-                0.46f,
-                2.05f),
+                0.48f,
+                2.12f),
             new VariantSpec(
                 "Tank",
                 $"{ConfigFolderPath}/EnemyConfig_Tank.asset",
                 $"{PrefabFolderPath}/Enemy_Chaser_Tank.prefab",
                 $"{MaterialFolderPath}/M_Zombie_Tank.mat",
-                new Color(0.52f, 0.58f, 0.66f),
-                1.22f,
-                320f,
-                3.1f,
-                20f,
-                1.55f,
+                new Color(0.38f, 0.48f, 0.58f),
+                1.32f,
+                420f,
+                2.65f,
+                16f,
+                1.7f,
                 35f,
-                1.1f,
+                1.25f,
                 false,
                 1.1f,
                 0.3f,
                 2.6f,
                 5f,
-                0.55f,
-                2.25f)
+                0.62f,
+                2.45f)
         };
 
         [MenuItem("Dustline Arena/Build Enemy Variants")]
@@ -218,10 +218,10 @@ namespace DustlineArena.Editor
             GameObject bruiser = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabFolderPath}/Enemy_Chaser_Bruiser.prefab");
             GameObject tank = AssetDatabase.LoadAssetAtPath<GameObject>($"{PrefabFolderPath}/Enemy_Chaser_Tank.prefab");
 
-            ConfigureWave($"{ConfigFolderPath}/Wave_01.asset", basic, new[] { basic, runner }, new[] { 6f, 1.6f });
-            ConfigureWave($"{ConfigFolderPath}/Wave_02.asset", basic, new[] { basic, runner, bruiser }, new[] { 5f, 2.2f, 1f });
-            ConfigureWave($"{ConfigFolderPath}/Wave_03.asset", basic, new[] { basic, runner, bruiser, tank }, new[] { 4f, 2.5f, 1.6f, 0.8f });
-            ConfigureWave($"{ConfigFolderPath}/Wave_04.asset", basic, new[] { basic, runner, bruiser, tank }, new[] { 3f, 2.5f, 2.2f, 1.5f });
+            ConfigureWave($"{ConfigFolderPath}/Wave_01.asset", basic, new[] { basic, runner }, new[] { 5.5f, 1.1f });
+            ConfigureWave($"{ConfigFolderPath}/Wave_02.asset", basic, new[] { basic, runner, bruiser }, new[] { 4.5f, 2.4f, 1.1f });
+            ConfigureWave($"{ConfigFolderPath}/Wave_03.asset", basic, new[] { basic, runner, bruiser, tank }, new[] { 3.4f, 2.7f, 1.9f, 0.65f });
+            ConfigureWave($"{ConfigFolderPath}/Wave_04.asset", basic, new[] { basic, runner, bruiser, tank }, new[] { 2.4f, 2.6f, 2.5f, 1.15f });
         }
 
         private static void ConfigureWave(string path, GameObject fallbackPrefab, GameObject[] prefabs, float[] weights)

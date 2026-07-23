@@ -20,6 +20,6 @@ MonoBehaviour:
   enemyPrefab: {fileID: 1078150796138241339, guid: ae833e1998cb5d84ab2a65c2bf05e82d, type: 3}
   enemyPrefabs:
   - prefab: {fileID: 1078150796138241339, guid: ae833e1998cb5d84ab2a65c2bf05e82d, type: 3}
-    weight: 6
+    weight: 5.5
   - prefab: {fileID: 1078150796138241339, guid: f4737cdce38a14b419099e9445ef0672, type: 3}
-    weight: 1.6
+    weight: 1.1

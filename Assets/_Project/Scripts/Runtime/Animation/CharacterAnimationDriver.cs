@@ -1,6 +1,7 @@
 using DustlineArena.Runtime.Common;
 using DustlineArena.Runtime.Enemies;
 using DustlineArena.Runtime.Health;
+using DustlineArena.Runtime.Player;
 using DustlineArena.Runtime.Weapons;
 using DG.Tweening;
 using UnityEngine;
@@ -15,11 +16,13 @@ namespace DustlineArena.Runtime.Animation
         private static readonly int FireHash = Animator.StringToHash("Fire");
         private static readonly int HitHash = Animator.StringToHash("Hit");
         private static readonly int DeadHash = Animator.StringToHash("Dead");
+        private static readonly int DodgeHash = Animator.StringToHash("Dodge");
 
         [SerializeField] private Animator animator;
         [SerializeField] private Rigidbody trackedBody;
         [SerializeField] private HealthComponent health;
         [SerializeField] private ProjectileWeapon weapon;
+        [SerializeField] private PlayerMotor playerMotor;
         [SerializeField] private EnemyBrain enemyBrain;
         [SerializeField] private NavMeshAgent navMeshAgent;
         [SerializeField, Min(0.01f)] private float maxSpeed = 8f;
@@ -41,6 +44,7 @@ namespace DustlineArena.Runtime.Animation
         private float movingHitReactTimer;
         private Tween enemyAttackPositionTween;
         private Tween enemyAttackRotationTween;
+        private bool hasDodgeParameter;
 
         private void Awake()
         {
@@ -64,6 +68,11 @@ namespace DustlineArena.Runtime.Animation
                 weapon = GetComponentInChildren<ProjectileWeapon>();
             }
 
+            if (playerMotor == null)
+            {
+                playerMotor = GetComponent<PlayerMotor>();
+            }
+
             if (enemyBrain == null)
             {
                 enemyBrain = GetComponent<EnemyBrain>();
@@ -85,6 +94,7 @@ namespace DustlineArena.Runtime.Animation
             }
 
             CacheMovingHitReactPose();
+            CacheAnimatorParameters();
             EnsureLeftHandWeaponIK();
         }
 
@@ -99,6 +109,11 @@ namespace DustlineArena.Runtime.Animation
             if (weapon != null)
             {
                 weapon.Fired += OnFired;
+            }
+
+            if (playerMotor != null)
+            {
+                playerMotor.Dodged += OnDodged;
             }
 
             if (enemyBrain != null)
@@ -121,6 +136,11 @@ namespace DustlineArena.Runtime.Animation
             if (weapon != null)
             {
                 weapon.Fired -= OnFired;
+            }
+
+            if (playerMotor != null)
+            {
+                playerMotor.Dodged -= OnDodged;
             }
 
             if (enemyBrain != null)
@@ -155,6 +175,15 @@ namespace DustlineArena.Runtime.Animation
             if (enemyBrain != null)
             {
                 PlayEnemyAttackFeedback();
+            }
+        }
+
+        private void OnDodged(Vector3 direction)
+        {
+            if (animator != null && hasDodgeParameter)
+            {
+                animator.ResetTrigger(HitHash);
+                animator.SetTrigger(DodgeHash);
             }
         }
 
@@ -258,6 +287,24 @@ namespace DustlineArena.Runtime.Animation
 
             movingHitReactBasePosition = movingHitReactRoot.localPosition;
             movingHitReactBaseRotation = movingHitReactRoot.localRotation;
+        }
+
+        private void CacheAnimatorParameters()
+        {
+            hasDodgeParameter = false;
+            if (animator == null)
+            {
+                return;
+            }
+
+            foreach (AnimatorControllerParameter parameter in animator.parameters)
+            {
+                if (parameter.nameHash == DodgeHash)
+                {
+                    hasDodgeParameter = true;
+                    return;
+                }
+            }
         }
 
         private void ResetMovingHitReactPose()

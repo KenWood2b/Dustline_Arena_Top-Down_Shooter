@@ -33,7 +33,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1.22, y: 1.22, z: 1.22}
+  m_LocalScale: {x: 1.32, y: 1.32, z: 1.32}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 565148655573061393}
@@ -85,10 +85,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.55
-  m_Height: 2.25
+  m_Radius: 0.62
+  m_Height: 2.45
   m_Direction: 1
-  m_Center: {x: 0, y: 1.125, z: 0}
+  m_Center: {x: 0, y: 1.225, z: 0}
 --- !u!114 &6698590171351466327
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -114,7 +114,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fa743f1f17e2f564b9eaa1e6c39341b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 320
+  maxHealth: 420
   destroyOnDeath: 1
 --- !u!114 &310621793845230663
 MonoBehaviour:
@@ -157,7 +157,7 @@ MonoBehaviour:
   weapon: {fileID: 0}
   enemyBrain: {fileID: 310621793845230663}
   navMeshAgent: {fileID: 1559938055222379721}
-  maxSpeed: 3.1
+  maxSpeed: 2.65
   movingHitReactSpeed: 0.15
   movingHitReactRoot: {fileID: 0}
   movingHitReactDuration: 0.18
@@ -178,16 +178,16 @@ NavMeshAgent:
   m_GameObject: {fileID: 1078150796138241339}
   m_Enabled: 1
   m_AgentTypeID: 0
-  m_Radius: 0.55
-  m_Speed: 3.1
-  m_Acceleration: 20
+  m_Radius: 0.62
+  m_Speed: 2.65
+  m_Acceleration: 16
   avoidancePriority: 50
   m_AngularSpeed: 720
-  m_StoppingDistance: 1.3175
+  m_StoppingDistance: 1.445
   m_AutoTraverseOffMeshLink: 1
   m_AutoBraking: 1
   m_AutoRepath: 1
-  m_Height: 2.25
+  m_Height: 2.45
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4

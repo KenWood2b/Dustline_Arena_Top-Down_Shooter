@@ -149,6 +149,7 @@ namespace DustlineArena.Editor
             controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
             controller.AddParameter("Fire", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Hit", AnimatorControllerParameterType.Trigger);
+            controller.AddParameter("Dodge", AnimatorControllerParameterType.Trigger);
             controller.AddParameter("Dead", AnimatorControllerParameterType.Bool);
 
             AnimatorStateMachine machine = controller.layers[0].stateMachine;
@@ -156,20 +157,25 @@ namespace DustlineArena.Editor
             AnimatorState run = machine.AddState("Run Rifle", new Vector3(520f, 120f, 0f));
             AnimatorState fire = machine.AddState("Fire", new Vector3(520f, -40f, 0f));
             AnimatorState hit = machine.AddState("Hit", new Vector3(260f, -160f, 0f));
+            AnimatorState dodge = machine.AddState("Dodge Forward", new Vector3(520f, -240f, 0f));
             AnimatorState dead = machine.AddState("Dead", new Vector3(780f, -160f, 0f));
 
             idle.motion = LoadClip("Assets/KayKit/Characters/Animations/Animations/Rig_Medium/Combat Ranged/Ranged_2H_Aiming.anim");
             run.motion = LoadClip("Assets/KayKit/Characters/Animations/Animations/Rig_Medium/Movement Advanced/Running_HoldingRifle.anim");
             fire.motion = LoadClip("Assets/KayKit/Characters/Animations/Animations/Rig_Medium/Combat Ranged/Ranged_2H_Shoot.anim");
             hit.motion = LoadClip("Assets/KayKit/Characters/Animations/Animations/Rig_Medium/General/Hit_A.anim");
+            dodge.motion = LoadClip("Assets/KayKit/Characters/Animations/Animations/Rig_Medium/Movement Advanced/Dodge_Forward.anim");
+            dodge.speed = 1.12f;
             dead.motion = LoadClip("Assets/KayKit/Characters/Animations/Animations/Rig_Medium/General/Death_A.anim");
 
             machine.defaultState = idle;
             AddFloatTransition(idle, run, "Speed", AnimatorConditionMode.Greater, 0.1f);
             AddFloatTransition(run, idle, "Speed", AnimatorConditionMode.Less, 0.1f);
             AddTriggerTransition(machine, hit, "Hit");
+            AddTriggerTransition(machine, dodge, "Dodge");
             AddBoolTransition(machine, dead, "Dead", true);
             AddExitTransition(hit, idle, 0.85f);
+            AddExitTransition(dodge, idle, 0.82f);
 
             return controller;
         }

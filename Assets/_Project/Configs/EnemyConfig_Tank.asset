@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493660ba660f38043b2f5c7d118c4952, type: 3}
   m_Name: EnemyConfig_Tank
   m_EditorClassIdentifier: 
-  moveSpeed: 3.1
-  acceleration: 20
-  attackRange: 1.55
+  moveSpeed: 2.65
+  acceleration: 16
+  attackRange: 1.7
   attackDamage: 35
-  attackCooldown: 1.1
+  attackCooldown: 1.25
   useChaseBurst: 0
   chaseBurstSpeedMultiplier: 1.1
   chaseBurstDuration: 0.3

@@ -16,6 +16,7 @@ namespace DustlineArena.Runtime.Player
         public bool GrenadeHeld { get; private set; }
         public bool GrenadePressed { get; private set; }
         public bool GrenadeReleased { get; private set; }
+        public bool DodgePressed { get; private set; }
 
         private void Awake()
         {
@@ -43,6 +44,7 @@ namespace DustlineArena.Runtime.Player
             GrenadeHeld = Input.GetKey(KeyCode.G) || Input.GetMouseButton(1);
             GrenadePressed = Input.GetKeyDown(KeyCode.G) || Input.GetMouseButtonDown(1);
             GrenadeReleased = !GrenadeHeld && (Input.GetKeyUp(KeyCode.G) || Input.GetMouseButtonUp(1));
+            DodgePressed = Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.LeftShift);
         }
 
         private void ClearInput()
@@ -55,6 +57,7 @@ namespace DustlineArena.Runtime.Player
             GrenadeHeld = false;
             GrenadePressed = false;
             GrenadeReleased = false;
+            DodgePressed = false;
         }
     }
 }

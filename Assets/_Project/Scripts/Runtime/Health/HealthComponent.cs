@@ -11,6 +11,7 @@ namespace DustlineArena.Runtime.Health
         [SerializeField] private bool destroyOnDeath;
 
         private float currentHealth;
+        private float invulnerableUntil;
         private bool isInitialized;
 
         public event Action<HealthChangedArgs> Changed;
@@ -21,6 +22,7 @@ namespace DustlineArena.Runtime.Health
         public float Current => currentHealth;
         public float Max => maxHealth;
         public bool IsAlive => currentHealth > 0f;
+        public bool IsInvulnerable => Time.time < invulnerableUntil;
         public bool DestroyOnDeath
         {
             get => destroyOnDeath;
@@ -51,6 +53,11 @@ namespace DustlineArena.Runtime.Health
             }
 
             if (!IsAlive || damage.Amount <= 0f)
+            {
+                return;
+            }
+
+            if (IsInvulnerable)
             {
                 return;
             }
@@ -89,6 +96,16 @@ namespace DustlineArena.Runtime.Health
             currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
             Changed?.Invoke(new HealthChangedArgs(currentHealth, maxHealth, currentHealth - previousHealth));
             return currentHealth > previousHealth;
+        }
+
+        public void SetInvulnerable(float duration)
+        {
+            if (duration <= 0f)
+            {
+                return;
+            }
+
+            invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + duration);
         }
 
         private void InitializeHealth()

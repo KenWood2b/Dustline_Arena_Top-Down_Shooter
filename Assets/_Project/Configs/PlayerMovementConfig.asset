@@ -15,3 +15,7 @@ MonoBehaviour:
   moveSpeed: 8
   acceleration: 45
   rotationSpeed: 720
+  dodgeSpeed: 16
+  dodgeDuration: 0.28
+  dodgeCooldown: 1.35
+  dodgeInvulnerabilityDuration: 0.22

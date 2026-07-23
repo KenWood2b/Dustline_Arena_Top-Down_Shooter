@@ -155,6 +155,7 @@ MonoBehaviour:
   trackedBody: {fileID: 4947520314896802856}
   health: {fileID: 4797535188596162967}
   weapon: {fileID: 0}
+  playerMotor: {fileID: 0}
   enemyBrain: {fileID: 310621793845230663}
   navMeshAgent: {fileID: 1559938055222379721}
   maxSpeed: 4.5

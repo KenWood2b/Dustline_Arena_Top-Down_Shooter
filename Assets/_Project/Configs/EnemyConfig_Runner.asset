@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 493660ba660f38043b2f5c7d118c4952, type: 3}
   m_Name: EnemyConfig_Runner
   m_EditorClassIdentifier: 
-  moveSpeed: 8.8
-  acceleration: 78
+  moveSpeed: 9.8
+  acceleration: 96
   attackRange: 1.2
-  attackDamage: 8
-  attackCooldown: 0.55
+  attackDamage: 7
+  attackCooldown: 0.5
   useChaseBurst: 1
-  chaseBurstSpeedMultiplier: 1.34
-  chaseBurstDuration: 0.62
-  chaseBurstCooldown: 1.75
-  chaseBurstMinDistance: 3.75
+  chaseBurstSpeedMultiplier: 1.48
+  chaseBurstDuration: 0.55
+  chaseBurstCooldown: 1.45
+  chaseBurstMinDistance: 3
