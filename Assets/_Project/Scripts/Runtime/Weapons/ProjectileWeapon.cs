@@ -279,7 +279,7 @@ namespace DustlineArena.Runtime.Weapons
             currentAmmo.Magazine--;
             AmmoChanged?.Invoke();
 
-            Vector3 normalizedDirection = direction.normalized;
+            Vector3 normalizedDirection = SanitizeFireDirection(direction);
             TeamId team = ownerTeam == null ? TeamId.Neutral : ownerTeam.Team;
             int projectileCount = Mathf.Max(1, config.ProjectilesPerShot);
             for (int i = 0; i < projectileCount; i++)
@@ -761,6 +761,19 @@ namespace DustlineArena.Runtime.Weapons
 
             float yaw = UnityEngine.Random.Range(-spreadAngle, spreadAngle);
             return Quaternion.AngleAxis(yaw, Vector3.up) * direction;
+        }
+
+        private Vector3 SanitizeFireDirection(Vector3 direction)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.0001f)
+            {
+                return direction.normalized;
+            }
+
+            Vector3 fallback = ownerTeam == null ? transform.forward : ownerTeam.transform.forward;
+            fallback.y = 0f;
+            return fallback.sqrMagnitude > 0.0001f ? fallback.normalized : Vector3.forward;
         }
 
         private sealed class AmmoState

@@ -68,9 +68,8 @@ namespace DustlineArena.Runtime.Player
                 : inputReader.FireHeld;
             if (fireRequested)
             {
-                Vector3 fireDirection = weapon.Muzzle == null
-                    ? aimController.AimDirection
-                    : aimController.GetAimDirectionFrom(weapon.Muzzle.position);
+                Vector3 aimOrigin = weapon.Muzzle == null ? transform.position : weapon.Muzzle.position;
+                Vector3 fireDirection = aimController.GetAimDirectionFrom(aimOrigin);
                 bool fired = weapon.TryFire(fireDirection);
                 if (!fired && weapon.AmmoInMagazine == 0)
                 {
