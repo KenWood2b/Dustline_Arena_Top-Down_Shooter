@@ -1,5 +1,6 @@
 using DustlineArena.Runtime.Config;
 using DustlineArena.Runtime.Health;
+using DustlineArena.Runtime.Audio;
 using System;
 using UnityEngine;
 
@@ -139,6 +140,7 @@ namespace DustlineArena.Runtime.Player
             nextDodgeTime = Time.time + config.DodgeCooldown;
             health?.SetInvulnerable(config.DodgeInvulnerabilityDuration);
             Dodged?.Invoke(dodgeDirection);
+            GameAudio.PlayDodge(transform.position);
         }
 
         private void ApplyDodgeVelocity()

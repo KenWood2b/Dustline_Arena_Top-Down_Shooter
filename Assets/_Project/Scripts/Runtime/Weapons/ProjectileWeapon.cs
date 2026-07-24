@@ -1,5 +1,6 @@
 using DustlineArena.Runtime.Common;
 using DustlineArena.Runtime.Config;
+using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Feedback;
 using DustlineArena.Runtime.Health;
 using DG.Tweening;
@@ -202,6 +203,7 @@ namespace DustlineArena.Runtime.Weapons
             isReloading = true;
             reloadCompleteTime = Time.time + GetReloadStepDuration();
             ReloadStarted?.Invoke();
+            GameAudio.PlayReloadStart(muzzle == null ? transform.position : muzzle.position);
             return true;
         }
 
@@ -297,6 +299,7 @@ namespace DustlineArena.Runtime.Weapons
 
             ShellCasingFx.Spawn(muzzle.position, normalizedDirection, config.Visual);
             CombatVfx.SpawnMuzzleFlash(muzzle, normalizedDirection, config.Visual);
+            GameAudio.PlayWeaponFire(config.Visual, muzzle.position);
             PlayRecoilKick();
             Fired?.Invoke();
             AnyFired?.Invoke(this);
@@ -365,6 +368,7 @@ namespace DustlineArena.Runtime.Weapons
             isReloading = false;
             reloadCompleteTime = 0f;
             ReloadCompleted?.Invoke();
+            GameAudio.PlayReloadComplete(muzzle == null ? transform.position : muzzle.position);
         }
 
         private void CancelReload()

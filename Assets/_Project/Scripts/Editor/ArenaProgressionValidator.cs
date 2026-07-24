@@ -15,6 +15,7 @@ namespace DustlineArena.Editor
     {
         private const int SceneCount = 5;
         private const float TransitionDelay = 2f;
+        private const string MenuScenePath = "Assets/_Project/Scenes/Dustline_MainMenu.unity";
         private const string ScenePathFormat = "Assets/_Project/Scenes/Dustline_Arena_{0:00}.unity";
         private const string SceneNameFormat = "Dustline_Arena_{0:00}";
 
@@ -42,6 +43,11 @@ namespace DustlineArena.Editor
         {
             List<EditorBuildSettingsScene> orderedScenes = new List<EditorBuildSettingsScene>();
             HashSet<string> arenaScenePaths = new HashSet<string>();
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(MenuScenePath) != null)
+            {
+                orderedScenes.Add(new EditorBuildSettingsScene(MenuScenePath, true));
+            }
+
             for (int i = 1; i <= SceneCount; i++)
             {
                 string path = GetScenePath(i);
@@ -53,7 +59,7 @@ namespace DustlineArena.Editor
             for (int i = 0; i < existingScenes.Length; i++)
             {
                 EditorBuildSettingsScene scene = existingScenes[i];
-                if (!arenaScenePaths.Contains(scene.path))
+                if (!arenaScenePaths.Contains(scene.path) && scene.path != MenuScenePath)
                 {
                     orderedScenes.Add(scene);
                 }

@@ -1,4 +1,5 @@
 using DustlineArena.Runtime.Common;
+using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Weapons;
 using UnityEngine;
 
@@ -65,6 +66,7 @@ namespace DustlineArena.Runtime.Pickups
             int amount = amountOverride > 0 ? amountOverride : weapon.Config.AmmoPerPickup;
             if (weapon.AddAmmo(amount))
             {
+                GameAudio.PlayPickup(transform.position);
                 PickupFeedback.ShowPopup(transform.position, $"+{amount} AMMO", new Color(0.84f, 1f, 0.36f, 1f));
                 Destroy(gameObject);
             }

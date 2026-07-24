@@ -1,4 +1,5 @@
 using System;
+using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Common;
 using UnityEngine;
 
@@ -68,6 +69,7 @@ namespace DustlineArena.Runtime.Health
             Damaged?.Invoke(damage);
             AnyDamaged?.Invoke(this, damage);
             Changed?.Invoke(new HealthChangedArgs(currentHealth, maxHealth, currentHealth - previousHealth));
+            PlayDamageAudio();
 
             if (currentHealth <= 0f)
             {
@@ -112,6 +114,21 @@ namespace DustlineArena.Runtime.Health
         {
             currentHealth = maxHealth;
             isInitialized = true;
+        }
+
+        private void PlayDamageAudio()
+        {
+            TeamMember team = GetComponentInParent<TeamMember>();
+            if (team != null && team.Team == TeamId.Player)
+            {
+                GameAudio.PlayPlayerHit(transform.position);
+                return;
+            }
+
+            if (team != null && team.Team == TeamId.Enemy)
+            {
+                GameAudio.PlayZombiePain(transform.position);
+            }
         }
     }
 }

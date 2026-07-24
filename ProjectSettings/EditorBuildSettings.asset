@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/_Project/Scenes/Dustline_MainMenu.unity
+    guid: 593bfc28c93ca7c4eb351dc4239945e4
+  - enabled: 1
     path: Assets/_Project/Scenes/Dustline_Arena_01.unity
     guid: 1c37bdfdb214b1147a9a8c4df2835632
   - enabled: 1

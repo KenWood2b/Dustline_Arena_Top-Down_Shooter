@@ -1,4 +1,5 @@
 using DustlineArena.Runtime.Common;
+using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Health;
 using UnityEngine;
 
@@ -72,6 +73,7 @@ namespace DustlineArena.Runtime.Pickups
             float previousHealth = health.Current;
             if (health.Heal(healAmount) && destroyOnPickup)
             {
+                GameAudio.PlayPickup(transform.position);
                 int healed = Mathf.CeilToInt(health.Current - previousHealth);
                 PickupFeedback.ShowPopup(transform.position, $"+{healed} HP", new Color(0.46f, 1f, 0.55f, 1f));
                 Destroy(gameObject);

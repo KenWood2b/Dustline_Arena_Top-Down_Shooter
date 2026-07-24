@@ -1,0 +1,86 @@
+using DustlineArena.Runtime.Audio;
+using UnityEditor;
+using UnityEngine;
+
+namespace DustlineArena.Editor
+{
+    public static class GameAudioLibraryBuilder
+    {
+        private const string LibraryFolder = "Assets/_Project/Resources/Audio";
+        private const string LibraryPath = LibraryFolder + "/GameAudioLibrary.asset";
+
+        [MenuItem("Dustline Arena/Build Game Audio Library")]
+        public static void Build()
+        {
+            EnsureFolder("Assets/_Project", "Resources");
+            EnsureFolder("Assets/_Project/Resources", "Audio");
+
+            GameAudioLibrary library = AssetDatabase.LoadAssetAtPath<GameAudioLibrary>(LibraryPath);
+            if (library == null)
+            {
+                library = ScriptableObject.CreateInstance<GameAudioLibrary>();
+                AssetDatabase.CreateAsset(library, LibraryPath);
+            }
+
+            SerializedObject serializedLibrary = new SerializedObject(library);
+            SetClip(serializedLibrary, "menuMusic", "Assets/_Project/Audio/Music/dark_place.ogg");
+            SetClip(serializedLibrary, "gameplayMusic", "Assets/_Project/Audio/Music/dark_place.ogg");
+
+            SetClip(serializedLibrary, "uiSelect", "Assets/_Project/Audio/SFX/UI/KenneyInterface/select_001.ogg");
+            SetClip(serializedLibrary, "uiConfirm", "Assets/_Project/Audio/SFX/UI/KenneyInterface/confirmation_001.ogg");
+            SetClip(serializedLibrary, "uiBack", "Assets/_Project/Audio/SFX/UI/KenneyInterface/back_001.ogg");
+            SetClip(serializedLibrary, "uiError", "Assets/_Project/Audio/SFX/UI/KenneyInterface/error_001.ogg");
+
+            SetClip(serializedLibrary, "pistolFire", "Assets/Scifi Guns SFX Pack/Gun1_1.wav");
+            SetClip(serializedLibrary, "smgFire", "Assets/Scifi Guns SFX Pack/Gun3_1.wav");
+            SetClip(serializedLibrary, "shotgunFire", "Assets/Scifi Guns SFX Pack/Gun5_1.wav");
+            SetClip(serializedLibrary, "akFire", "Assets/Scifi Guns SFX Pack/Gun4_1.wav");
+            SetClip(serializedLibrary, "reloadStart", "Assets/Scifi Guns SFX Pack/Gun1_Load.wav");
+            SetClip(serializedLibrary, "reloadComplete", "Assets/_Project/Audio/SFX/UI/KenneyInterface/confirmation_002.ogg");
+
+            SetClip(serializedLibrary, "pickup", "Assets/_Project/Audio/SFX/UI/KenneyUIAudio/switch12.ogg");
+            SetClip(serializedLibrary, "playerHit", "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactPunch_medium_000.ogg");
+            SetClip(serializedLibrary, "dodge", "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_concrete_000.ogg");
+            SetClip(serializedLibrary, "zombieMoan", "Assets/_Project/Audio/SFX/Zombies/zombie_moans.ogg");
+            SetClip(serializedLibrary, "zombiePain", "Assets/_Project/Audio/SFX/Zombies/zombie_pain.wav");
+
+            serializedLibrary.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(library);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("Dustline Arena: game audio library built.");
+        }
+
+        public static void BuildFromCommandLine()
+        {
+            Build();
+        }
+
+        private static void SetClip(SerializedObject serializedObject, string propertyName, string assetPath)
+        {
+            SerializedProperty property = serializedObject.FindProperty(propertyName);
+            if (property == null)
+            {
+                Debug.LogWarning($"Dustline Arena: missing audio library property {propertyName}.");
+                return;
+            }
+
+            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(assetPath);
+            if (clip == null)
+            {
+                Debug.LogWarning($"Dustline Arena: missing audio clip at {assetPath}.");
+            }
+
+            property.objectReferenceValue = clip;
+        }
+
+        private static void EnsureFolder(string parent, string child)
+        {
+            string path = parent + "/" + child;
+            if (!AssetDatabase.IsValidFolder(path))
+            {
+                AssetDatabase.CreateFolder(parent, child);
+            }
+        }
+    }
+}
