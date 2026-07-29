@@ -23,8 +23,13 @@ namespace DustlineArena.Editor
             }
 
             SerializedObject serializedLibrary = new SerializedObject(library);
-            SetClip(serializedLibrary, "menuMusic", "Assets/_Project/Audio/Music/dark_place.ogg");
-            SetClip(serializedLibrary, "gameplayMusic", "Assets/_Project/Audio/Music/dark_place.ogg");
+            SetClip(serializedLibrary, "menuMusic", "Assets/_Project/Audio/Music/title.ogg");
+            SetClip(serializedLibrary, "gameplayMusic", "Assets/_Project/Audio/Music/sector.ogg");
+            SetClip(serializedLibrary, "arena01Music", "Assets/_Project/Audio/Music/sector.ogg");
+            SetClip(serializedLibrary, "arena02Music", "Assets/_Project/Audio/Music/dark_place.ogg");
+            SetClip(serializedLibrary, "arena03Music", "Assets/_Project/Audio/Music/pulse.ogg");
+            SetClip(serializedLibrary, "arena04Music", "Assets/_Project/Audio/Music/urgent.ogg");
+            SetClip(serializedLibrary, "arena05Music", "Assets/_Project/Audio/Music/transmission.ogg");
 
             SetClip(serializedLibrary, "uiSelect", "Assets/_Project/Audio/SFX/UI/KenneyInterface/select_001.ogg");
             SetClip(serializedLibrary, "uiConfirm", "Assets/_Project/Audio/SFX/UI/KenneyInterface/confirmation_001.ogg");
@@ -41,8 +46,14 @@ namespace DustlineArena.Editor
             SetClip(serializedLibrary, "pickup", "Assets/_Project/Audio/SFX/UI/KenneyUIAudio/switch12.ogg");
             SetClip(serializedLibrary, "playerHit", "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactPunch_medium_000.ogg");
             SetClip(serializedLibrary, "dodge", "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_concrete_000.ogg");
+            SetClip(serializedLibrary, "grenadeThrow", "Assets/_Project/Audio/SFX/UI/KenneyInterface/drop_001.ogg");
+            SetClip(serializedLibrary, "grenadeBounce", "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactMetal_light_000.ogg");
+            SetClip(serializedLibrary, "grenadeExplosion", "Assets/Scifi Guns SFX Pack/Gun5.wav");
+            SetClip(serializedLibrary, "grenadeExplosionTail", "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactMetal_heavy_000.ogg");
             SetClip(serializedLibrary, "zombieMoan", "Assets/_Project/Audio/SFX/Zombies/zombie_moans.ogg");
             SetClip(serializedLibrary, "zombiePain", "Assets/_Project/Audio/SFX/Zombies/zombie_pain.wav");
+            SetClip(serializedLibrary, "zombieAttack", "Assets/_Project/Audio/SFX/Zombies/zombie_pain.wav");
+            SetClip(serializedLibrary, "zombieDeath", "Assets/_Project/Audio/SFX/Zombies/zombie_moans.ogg");
 
             serializedLibrary.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(library);

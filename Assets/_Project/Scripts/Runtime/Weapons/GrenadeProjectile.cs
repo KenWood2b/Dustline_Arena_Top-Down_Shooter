@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Common;
 using UnityEngine;
 
@@ -21,6 +22,8 @@ namespace DustlineArena.Runtime.Weapons
         private LayerMask hitMask;
         private bool initialized;
         private bool exploded;
+        private float lastBounceTime = float.NegativeInfinity;
+        private int bounceSoundCount;
         private readonly Collider[] explosionHitBuffer = new Collider[ExplosionHitBufferSize];
         private readonly HashSet<IDamageable> damagedTargets = new HashSet<IDamageable>();
 
@@ -43,6 +46,24 @@ namespace DustlineArena.Runtime.Weapons
             body.angularVelocity = Random.onUnitSphere * 10f;
         }
 
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (!initialized || exploded || bounceSoundCount >= 4 || Time.time - lastBounceTime < 0.12f)
+            {
+                return;
+            }
+
+            float impactSpeed = collision.relativeVelocity.magnitude;
+            if (impactSpeed < 1.2f)
+            {
+                return;
+            }
+
+            lastBounceTime = Time.time;
+            bounceSoundCount++;
+            GameAudio.PlayGrenadeBounce(transform.position, Mathf.InverseLerp(1.2f, 9f, impactSpeed));
+        }
+
         private void Update()
         {
             if (!initialized || exploded)
@@ -61,6 +82,7 @@ namespace DustlineArena.Runtime.Weapons
         {
             exploded = true;
             Vector3 center = transform.position;
+            GameAudio.PlayGrenadeExplosion(center);
             int hitCount = Physics.OverlapSphereNonAlloc(
                 center,
                 explosionRadius,

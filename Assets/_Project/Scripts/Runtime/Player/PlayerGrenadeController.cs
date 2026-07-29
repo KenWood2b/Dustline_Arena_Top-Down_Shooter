@@ -1,4 +1,5 @@
 using System;
+using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Common;
 using DustlineArena.Runtime.Config;
 using DustlineArena.Runtime.Health;
@@ -172,6 +173,7 @@ namespace DustlineArena.Runtime.Player
                 config.FuseTime,
                 config.ExplosionRadius,
                 config.HitMask);
+            GameAudio.PlayGrenadeThrow(origin);
 
             grenadeCount--;
             nextThrowTime = Time.time + config.ThrowCooldown;

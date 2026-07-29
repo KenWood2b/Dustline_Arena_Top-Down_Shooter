@@ -12,8 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c950e0092cb9a4a47bca9bc352df42e0, type: 3}
   m_Name: GameAudioLibrary
   m_EditorClassIdentifier: 
-  menuMusic: {fileID: 8300000, guid: af053d874b9f54d44b73169a3bc74308, type: 3}
-  gameplayMusic: {fileID: 8300000, guid: af053d874b9f54d44b73169a3bc74308, type: 3}
+  menuMusic: {fileID: 8300000, guid: 1d2e3f405162738495a6b7c8d9e0f112, type: 3}
+  gameplayMusic: {fileID: 8300000, guid: 2e3f405162738495a6b7c8d9e0f11223, type: 3}
+  arena01Music: {fileID: 8300000, guid: 2e3f405162738495a6b7c8d9e0f11223, type: 3}
+  arena02Music: {fileID: 8300000, guid: af053d874b9f54d44b73169a3bc74308, type: 3}
+  arena03Music: {fileID: 8300000, guid: 4a5162738495a6b7c8d9e0f112233445, type: 3}
+  arena04Music: {fileID: 8300000, guid: 5b62738495a6b7c8d9e0f11223344556, type: 3}
+  arena05Music: {fileID: 8300000, guid: 6c738495a6b7c8d9e0f1122334455667, type: 3}
   uiSelect: {fileID: 8300000, guid: efba3bbcc9321df4192e2af4cc8cee4a, type: 3}
   uiConfirm: {fileID: 8300000, guid: a7ccefabffe0992418a4364a758d1090, type: 3}
   uiBack: {fileID: 8300000, guid: a26f205bb45a72d479b3c651232296cc, type: 3}
@@ -27,5 +32,11 @@ MonoBehaviour:
   pickup: {fileID: 8300000, guid: 847ced1039b692147b30f39e18942764, type: 3}
   playerHit: {fileID: 8300000, guid: 4bae94caf6d7598409514c7b95f612b0, type: 3}
   dodge: {fileID: 8300000, guid: 50cae574f9018df49b08666ba1d41665, type: 3}
+  grenadeThrow: {fileID: 8300000, guid: 9ef73e88cb1a4b3479ea2b1177a8dc89, type: 3}
+  grenadeBounce: {fileID: 8300000, guid: 426175f825e59d54ba4bbd0c7d00e43e, type: 3}
+  grenadeExplosion: {fileID: 8300000, guid: ade03cc41862efe45a14c4802b87b026, type: 3}
+  grenadeExplosionTail: {fileID: 8300000, guid: 30fc1da88d3c5e44c801e3795488ac43, type: 3}
   zombieMoan: {fileID: 8300000, guid: 0f5422d5b5dae7c4c916ec14d29fa110, type: 3}
   zombiePain: {fileID: 8300000, guid: 8e5bffc4bc3347849a9e3832b97cd632, type: 3}
+  zombieAttack: {fileID: 8300000, guid: 8e5bffc4bc3347849a9e3832b97cd632, type: 3}
+  zombieDeath: {fileID: 8300000, guid: 0f5422d5b5dae7c4c916ec14d29fa110, type: 3}

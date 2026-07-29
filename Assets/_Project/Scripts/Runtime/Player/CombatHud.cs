@@ -1,4 +1,5 @@
 using DustlineArena.Runtime.Common;
+using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Health;
 using DustlineArena.Runtime.Spawning;
 using DustlineArena.Runtime.UI;
@@ -169,7 +170,9 @@ namespace DustlineArena.Runtime.Player
         {
             if (isPaused)
             {
-                SetPaused(false);
+                isPaused = false;
+                Time.timeScale = prePauseTimeScale <= 0f ? 1f : prePauseTimeScale;
+                GameAudio.SetGameplayPaused(false);
             }
 
             Cursor.visible = cursorWasVisible;
@@ -1417,12 +1420,14 @@ namespace DustlineArena.Runtime.Player
             {
                 prePauseTimeScale = Time.timeScale <= 0f ? 1f : Time.timeScale;
                 Time.timeScale = 0f;
+                GameAudio.SetGameplayPaused(true);
                 Cursor.visible = true;
                 ShowPauseOverlay();
                 return;
             }
 
             Time.timeScale = prePauseTimeScale <= 0f ? 1f : prePauseTimeScale;
+            GameAudio.SetGameplayPaused(false);
             if (hideSystemCursor)
             {
                 Cursor.visible = false;

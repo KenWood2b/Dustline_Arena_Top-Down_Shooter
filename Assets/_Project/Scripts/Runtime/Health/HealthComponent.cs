@@ -69,7 +69,7 @@ namespace DustlineArena.Runtime.Health
             Damaged?.Invoke(damage);
             AnyDamaged?.Invoke(this, damage);
             Changed?.Invoke(new HealthChangedArgs(currentHealth, maxHealth, currentHealth - previousHealth));
-            PlayDamageAudio();
+            PlayDamageAudio(currentHealth <= 0f);
 
             if (currentHealth <= 0f)
             {
@@ -116,7 +116,7 @@ namespace DustlineArena.Runtime.Health
             isInitialized = true;
         }
 
-        private void PlayDamageAudio()
+        private void PlayDamageAudio(bool lethal)
         {
             TeamMember team = GetComponentInParent<TeamMember>();
             if (team != null && team.Team == TeamId.Player)
@@ -127,7 +127,14 @@ namespace DustlineArena.Runtime.Health
 
             if (team != null && team.Team == TeamId.Enemy)
             {
-                GameAudio.PlayZombiePain(transform.position);
+                if (lethal)
+                {
+                    GameAudio.PlayZombieDeath(team.gameObject, transform.position);
+                }
+                else
+                {
+                    GameAudio.PlayZombiePain(team.gameObject, transform.position);
+                }
             }
         }
     }

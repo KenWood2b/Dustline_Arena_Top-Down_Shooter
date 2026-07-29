@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Common;
 using DustlineArena.Runtime.Config;
 using DustlineArena.Runtime.Health;
@@ -42,6 +43,7 @@ namespace DustlineArena.Runtime.Enemies
         private float attackMovementLockedUntil;
         private float chaseBurstUntil;
         private float nextChaseBurstTime;
+        private float nextAmbientAudioTime;
         private Vector3 approachOffset;
         private int attackSlotIndex = -1;
 
@@ -82,6 +84,7 @@ namespace DustlineArena.Runtime.Enemies
             attackMovementLockedUntil = 0f;
             chaseBurstUntil = 0f;
             nextChaseBurstTime = Time.time + UnityEngine.Random.Range(0f, 0.6f);
+            nextAmbientAudioTime = Time.time + UnityEngine.Random.Range(1.8f, 5.5f);
             lastDestination = new Vector3(float.PositiveInfinity, 0f, float.PositiveInfinity);
             RollApproachOffset();
             RollAvoidancePriority();
@@ -92,16 +95,19 @@ namespace DustlineArena.Runtime.Enemies
 
         private void OnDisable()
         {
+            GameAudio.StopZombieSfx(gameObject);
             ReleaseAttackSlot();
         }
 
         private void OnDestroy()
         {
+            GameAudio.StopZombieSfx(gameObject);
             ReleaseAttackSlot();
         }
 
         private void Update()
         {
+            UpdateAmbientAudio();
             if (!HasAliveTarget())
             {
                 AcquirePlayerTarget();
@@ -445,6 +451,18 @@ namespace DustlineArena.Runtime.Enemies
             damageable.TakeDamage(new DamageInfo(config.AttackDamage, gameObject, teamMember.Team, target.position, direction));
             StopMoving();
             Attacked?.Invoke();
+            GameAudio.PlayZombieAttack(gameObject, transform.position);
+        }
+
+        private void UpdateAmbientAudio()
+        {
+            if (Time.time < nextAmbientAudioTime)
+            {
+                return;
+            }
+
+            nextAmbientAudioTime = Time.time + UnityEngine.Random.Range(5f, 10f);
+            GameAudio.PlayZombieMoan(gameObject, transform.position);
         }
 
         private bool IsAttackMovementLocked()
