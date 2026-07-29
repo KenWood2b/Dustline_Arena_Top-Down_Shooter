@@ -42,6 +42,7 @@ namespace DustlineArena.Editor
             SetClip(serializedLibrary, "akFire", "Assets/Scifi Guns SFX Pack/Gun4_1.wav");
             SetClip(serializedLibrary, "reloadStart", "Assets/Scifi Guns SFX Pack/Gun1_Load.wav");
             SetClip(serializedLibrary, "reloadComplete", "Assets/_Project/Audio/SFX/UI/KenneyInterface/confirmation_002.ogg");
+            SetClip(serializedLibrary, "emptyWeapon", "Assets/_Project/Audio/SFX/UI/KenneyInterface/error_001.ogg");
 
             SetClip(serializedLibrary, "pickup", "Assets/_Project/Audio/SFX/UI/KenneyUIAudio/switch12.ogg");
             SetClip(serializedLibrary, "playerHit", "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactPunch_medium_000.ogg");
@@ -54,6 +55,22 @@ namespace DustlineArena.Editor
             SetClip(serializedLibrary, "zombiePain", "Assets/_Project/Audio/SFX/Zombies/zombie_pain.wav");
             SetClip(serializedLibrary, "zombieAttack", "Assets/_Project/Audio/SFX/Zombies/zombie_pain.wav");
             SetClip(serializedLibrary, "zombieDeath", "Assets/_Project/Audio/SFX/Zombies/zombie_moans.ogg");
+            SetClip(serializedLibrary, "waveStarted", "Assets/_Project/Audio/SFX/UI/KenneyInterface/open_002.ogg");
+            SetClip(serializedLibrary, "waveCleared", "Assets/_Project/Audio/SFX/UI/KenneyInterface/confirmation_003.ogg");
+            SetClip(serializedLibrary, "arenaCleared", "Assets/_Project/Audio/Music/victory.ogg");
+            SetClip(serializedLibrary, "gameOver", "Assets/_Project/Audio/SFX/UI/KenneyInterface/close_004.ogg");
+            SetClips(
+                serializedLibrary,
+                "hardSurfaceFootsteps",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_concrete_000.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_concrete_001.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_concrete_002.ogg");
+            SetClips(
+                serializedLibrary,
+                "softSurfaceFootsteps",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_grass_000.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_grass_001.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_grass_002.ogg");
 
             serializedLibrary.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(library);
@@ -83,6 +100,28 @@ namespace DustlineArena.Editor
             }
 
             property.objectReferenceValue = clip;
+        }
+
+        private static void SetClips(SerializedObject serializedObject, string propertyName, params string[] assetPaths)
+        {
+            SerializedProperty property = serializedObject.FindProperty(propertyName);
+            if (property == null || !property.isArray)
+            {
+                Debug.LogWarning($"Dustline Arena: missing audio library array {propertyName}.");
+                return;
+            }
+
+            property.arraySize = assetPaths.Length;
+            for (int i = 0; i < assetPaths.Length; i++)
+            {
+                AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(assetPaths[i]);
+                if (clip == null)
+                {
+                    Debug.LogWarning($"Dustline Arena: missing audio clip at {assetPaths[i]}.");
+                }
+
+                property.GetArrayElementAtIndex(i).objectReferenceValue = clip;
+            }
         }
 
         private static void EnsureFolder(string parent, string child)

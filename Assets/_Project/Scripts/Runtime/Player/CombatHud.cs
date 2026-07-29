@@ -825,6 +825,7 @@ namespace DustlineArena.Runtime.Player
         private void OnPlayerDied()
         {
             RefreshHealth();
+            GameAudio.PlayGameOver();
             ShowDeathOverlay();
         }
 
@@ -1092,6 +1093,7 @@ namespace DustlineArena.Runtime.Player
         private void OnWaveStarted(int index)
         {
             RefreshWave();
+            GameAudio.PlayWaveStarted(index);
             string waveName = waveSpawner == null ? string.Empty : waveSpawner.GetWaveName(index);
             ShowBanner($"WAVE {index + 1}", string.IsNullOrWhiteSpace(waveName) ? "SURVIVE" : waveName.ToUpperInvariant());
         }
@@ -1099,6 +1101,11 @@ namespace DustlineArena.Runtime.Player
         private void OnWaveCompleted(int index)
         {
             RefreshWave();
+            if (waveSpawner == null || index < waveSpawner.WaveCount - 1)
+            {
+                GameAudio.PlayWaveCleared();
+            }
+
             ShowBanner($"WAVE {index + 1} CLEARED", "BREATHE, THEN MOVE");
         }
 
@@ -1110,6 +1117,7 @@ namespace DustlineArena.Runtime.Player
         private void OnAllWavesCompleted()
         {
             RefreshWave();
+            GameAudio.PlayArenaCleared();
             ShowLevelCompleteOverlay();
         }
 

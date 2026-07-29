@@ -28,6 +28,7 @@ namespace DustlineArena.Runtime.Audio
         [SerializeField] private AudioClip akFire;
         [SerializeField] private AudioClip reloadStart;
         [SerializeField] private AudioClip reloadComplete;
+        [SerializeField] private AudioClip emptyWeapon;
 
         [Header("Gameplay")]
         [SerializeField] private AudioClip pickup;
@@ -41,6 +42,12 @@ namespace DustlineArena.Runtime.Audio
         [SerializeField] private AudioClip zombiePain;
         [SerializeField] private AudioClip zombieAttack;
         [SerializeField] private AudioClip zombieDeath;
+        [SerializeField] private AudioClip waveStarted;
+        [SerializeField] private AudioClip waveCleared;
+        [SerializeField] private AudioClip arenaCleared;
+        [SerializeField] private AudioClip gameOver;
+        [SerializeField] private AudioClip[] hardSurfaceFootsteps;
+        [SerializeField] private AudioClip[] softSurfaceFootsteps;
 
         public AudioClip MenuMusic => menuMusic;
         public AudioClip GameplayMusic => gameplayMusic;
@@ -50,6 +57,7 @@ namespace DustlineArena.Runtime.Audio
         public AudioClip UiError => uiError;
         public AudioClip ReloadStart => reloadStart;
         public AudioClip ReloadComplete => reloadComplete;
+        public AudioClip EmptyWeapon => emptyWeapon;
         public AudioClip Pickup => pickup;
         public AudioClip PlayerHit => playerHit;
         public AudioClip Dodge => dodge;
@@ -61,6 +69,18 @@ namespace DustlineArena.Runtime.Audio
         public AudioClip ZombiePain => zombiePain;
         public AudioClip ZombieAttack => zombieAttack;
         public AudioClip ZombieDeath => zombieDeath;
+        public AudioClip WaveStarted => waveStarted;
+        public AudioClip WaveCleared => waveCleared;
+        public AudioClip ArenaCleared => arenaCleared;
+        public AudioClip GameOver => gameOver;
+
+        public AudioClip GetFootstepClip(bool softSurface)
+        {
+            AudioClip[] clips = softSurface ? softSurfaceFootsteps : hardSurfaceFootsteps;
+            return clips == null || clips.Length == 0
+                ? null
+                : clips[Random.Range(0, clips.Length)];
+        }
 
         public AudioClip GetMusicForScene(string sceneName)
         {

@@ -29,6 +29,7 @@ MonoBehaviour:
   akFire: {fileID: 8300000, guid: 7b889162724f05c4f95da46adbd50ef7, type: 3}
   reloadStart: {fileID: 8300000, guid: 6a32a0d49cd240b4cb9934adf37a49a5, type: 3}
   reloadComplete: {fileID: 8300000, guid: 049ae24dcf22c2e42a750ffd366fe608, type: 3}
+  emptyWeapon: {fileID: 8300000, guid: 1b7eacbe85b2b444395231130e9a0d07, type: 3}
   pickup: {fileID: 8300000, guid: 847ced1039b692147b30f39e18942764, type: 3}
   playerHit: {fileID: 8300000, guid: 4bae94caf6d7598409514c7b95f612b0, type: 3}
   dodge: {fileID: 8300000, guid: 50cae574f9018df49b08666ba1d41665, type: 3}
@@ -40,3 +41,15 @@ MonoBehaviour:
   zombiePain: {fileID: 8300000, guid: 8e5bffc4bc3347849a9e3832b97cd632, type: 3}
   zombieAttack: {fileID: 8300000, guid: 8e5bffc4bc3347849a9e3832b97cd632, type: 3}
   zombieDeath: {fileID: 8300000, guid: 0f5422d5b5dae7c4c916ec14d29fa110, type: 3}
+  waveStarted: {fileID: 8300000, guid: 09b792489338afc498bc36d215ad5a8e, type: 3}
+  waveCleared: {fileID: 8300000, guid: 8502a0356e331d043ac06619fa9a4733, type: 3}
+  arenaCleared: {fileID: 8300000, guid: 8e95a6b7c8d9e0f11223344556677889, type: 3}
+  gameOver: {fileID: 8300000, guid: 8f99b138f67a4d045b669dc95f39d3cf, type: 3}
+  hardSurfaceFootsteps:
+  - {fileID: 8300000, guid: 50cae574f9018df49b08666ba1d41665, type: 3}
+  - {fileID: 8300000, guid: 350c739f810a9b24b94df4a9e0497a52, type: 3}
+  - {fileID: 8300000, guid: 8a6842571af451d47aa092791d174f02, type: 3}
+  softSurfaceFootsteps:
+  - {fileID: 8300000, guid: e6479d8b26bed974695641e7ff793a3a, type: 3}
+  - {fileID: 8300000, guid: c6b751dab9a313248bc19949300795b7, type: 3}
+  - {fileID: 8300000, guid: 15c820d109d9aaa48b1a0c8323d64ded, type: 3}

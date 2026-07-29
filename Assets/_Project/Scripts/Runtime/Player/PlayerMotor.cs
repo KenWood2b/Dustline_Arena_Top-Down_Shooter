@@ -3,6 +3,7 @@ using DustlineArena.Runtime.Health;
 using DustlineArena.Runtime.Audio;
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace DustlineArena.Runtime.Player
 {
@@ -21,6 +22,7 @@ namespace DustlineArena.Runtime.Player
         private bool isDodging;
         private float dodgeEndTime;
         private float nextDodgeTime;
+        private float nextFootstepTime;
         private Vector3 dodgeDirection;
 
         public event Action<Vector3> Dodged;
@@ -61,6 +63,7 @@ namespace DustlineArena.Runtime.Player
 
         private void OnEnable()
         {
+            nextFootstepTime = Time.time + 0.12f;
             if (health != null)
             {
                 health.Died += FreezeDeadBody;
@@ -113,6 +116,7 @@ namespace DustlineArena.Runtime.Player
             body.velocity = new Vector3(velocity.x, 0f, velocity.z);
 
             KeepFixedHeight();
+            UpdateFootsteps(velocity.magnitude);
         }
 
         private void TryBeginDodge()
@@ -164,6 +168,27 @@ namespace DustlineArena.Runtime.Player
             {
                 body.position = new Vector3(position.x, fixedHeight, position.z);
             }
+        }
+
+        private void UpdateFootsteps(float planarSpeed)
+        {
+            if (planarSpeed < 0.5f || Time.time < nextFootstepTime)
+            {
+                return;
+            }
+
+            float speed01 = config == null || config.MoveSpeed <= 0f
+                ? 0f
+                : Mathf.Clamp01(planarSpeed / config.MoveSpeed);
+            nextFootstepTime = Time.time + Mathf.Lerp(0.42f, 0.29f, speed01);
+            GameAudio.PlayPlayerFootstep(transform.position, UsesSoftFootsteps(SceneManager.GetActiveScene().name));
+        }
+
+        private static bool UsesSoftFootsteps(string sceneName)
+        {
+            return sceneName == "Dustline_Arena_02" ||
+                   sceneName == "Dustline_Arena_03" ||
+                   sceneName == "Dustline_Arena_05";
         }
 
         private void FreezeDeadBody()

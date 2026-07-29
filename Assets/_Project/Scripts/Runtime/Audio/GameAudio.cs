@@ -130,6 +130,44 @@ namespace DustlineArena.Runtime.Audio
             audio.PlaySfxAt(audio.library == null ? null : audio.library.ReloadComplete, position, 0.38f, RandomPitch(0.025f));
         }
 
+        public static void PlayEmptyWeapon(Vector3 position)
+        {
+            GameAudio audio = Instance;
+            audio.PlaySfxAt(audio.library == null ? null : audio.library.EmptyWeapon, position, 0.24f, RandomPitch(0.025f));
+        }
+
+        public static void PlayPlayerFootstep(Vector3 position, bool softSurface)
+        {
+            GameAudio audio = Instance;
+            AudioClip clip = audio.library == null ? null : audio.library.GetFootstepClip(softSurface);
+            audio.PlaySfxAt(clip, position, softSurface ? 0.16f : 0.14f, RandomPitch(0.06f));
+        }
+
+        public static void PlayWaveStarted(int waveIndex)
+        {
+            GameAudio audio = Instance;
+            float pitch = Mathf.Clamp(0.96f + waveIndex * 0.025f, 0.96f, 1.08f);
+            audio.PlaySfxAt(audio.library == null ? null : audio.library.WaveStarted, Vector3.zero, 0.34f, pitch);
+        }
+
+        public static void PlayWaveCleared()
+        {
+            GameAudio audio = Instance;
+            audio.PlaySfxAt(audio.library == null ? null : audio.library.WaveCleared, Vector3.zero, 0.36f, 1f);
+        }
+
+        public static void PlayArenaCleared()
+        {
+            GameAudio audio = Instance;
+            audio.PlaySfxAt(audio.library == null ? null : audio.library.ArenaCleared, Vector3.zero, 0.58f, 1f);
+        }
+
+        public static void PlayGameOver()
+        {
+            GameAudio audio = Instance;
+            audio.PlaySfxAt(audio.library == null ? null : audio.library.GameOver, Vector3.zero, 0.46f, 0.92f);
+        }
+
         public static void PlayPickup(Vector3 position)
         {
             GameAudio audio = Instance;

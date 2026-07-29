@@ -1,4 +1,5 @@
 using DustlineArena.Runtime.Config;
+using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Weapons;
 using DustlineArena.Runtime.Health;
 using UnityEngine;
@@ -12,6 +13,8 @@ namespace DustlineArena.Runtime.Player
         [SerializeField] private MouseAimController aimController;
         [SerializeField] private ProjectileWeapon weapon;
         [SerializeField] private HealthComponent health;
+
+        private bool emptyFeedbackPlayed;
 
         private void Awake()
         {
@@ -66,6 +69,11 @@ namespace DustlineArena.Runtime.Player
             bool fireRequested = weapon.Config.Visual == WeaponVisualId.Pistol
                 ? inputReader.FirePressed
                 : inputReader.FireHeld;
+            if (!fireRequested || weapon.AmmoInMagazine > 0)
+            {
+                emptyFeedbackPlayed = false;
+            }
+
             if (fireRequested)
             {
                 Vector3 aimOrigin = weapon.Muzzle == null ? transform.position : weapon.Muzzle.position;
@@ -73,6 +81,12 @@ namespace DustlineArena.Runtime.Player
                 bool fired = weapon.TryFire(fireDirection);
                 if (!fired && weapon.AmmoInMagazine == 0)
                 {
+                    if (!emptyFeedbackPlayed)
+                    {
+                        GameAudio.PlayEmptyWeapon(aimOrigin);
+                        emptyFeedbackPlayed = true;
+                    }
+
                     weapon.BeginReload();
                 }
             }
