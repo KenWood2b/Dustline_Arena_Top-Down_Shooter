@@ -1,14 +1,16 @@
 # Third-Party Assets
 
-## Imported
+Player credits are in [`CREDITS.txt`](../../../CREDITS.txt) at the project root. Include
+it beside the executable in the downloadable Windows archive.
 
-- Synty Polygon Starter / Polygon Generic under `Assets/Synty`.
-- KayKit Free Sample under `Assets/KayKit`.
+## Distribution
 
-## Staging
+The build incorporates third-party art, audio and plugins. Asset Store items such as
+Synty POLYGON Starter and Sci-fi Guns SFX Pack are subject to the
+[Asset Store EULA](https://unity.com/legal/as-terms). Review any plans to distribute
+the Unity project separately from the compiled game.
 
-The root `Materials` folder is treated as local staging and is ignored by Git. Curated assets
-from that folder should be copied into `Assets/_Project/Art/ThirdParty/...` before use.
+The `Assets/_Project/UI/VerzatileDev_LICENSE.txt` file describes the UI attribution
+and additional terms. Local staging is under `Materials`, which Git ignores.
 
-No license/readme file was found in the staged `Materials` folder during the initial audit.
-Before shipping or publishing source, restore the download source and add license notes here.
+The two zombie audio files originate from the OpenGameArt pages linked in the credits.

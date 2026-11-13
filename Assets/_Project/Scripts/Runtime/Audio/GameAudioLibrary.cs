@@ -3,6 +3,14 @@ using UnityEngine;
 
 namespace DustlineArena.Runtime.Audio
 {
+    public enum SurfaceAudioType
+    {
+        Concrete,
+        Metal,
+        Wood,
+        Soft
+    }
+
     [CreateAssetMenu(menuName = "Dustline Arena/Audio/Game Audio Library", fileName = "GameAudioLibrary")]
     public sealed class GameAudioLibrary : ScriptableObject
     {
@@ -48,6 +56,10 @@ namespace DustlineArena.Runtime.Audio
         [SerializeField] private AudioClip gameOver;
         [SerializeField] private AudioClip[] hardSurfaceFootsteps;
         [SerializeField] private AudioClip[] softSurfaceFootsteps;
+        [SerializeField] private AudioClip[] concreteImpacts;
+        [SerializeField] private AudioClip[] metalImpacts;
+        [SerializeField] private AudioClip[] woodImpacts;
+        [SerializeField] private AudioClip[] softImpacts;
 
         public AudioClip MenuMusic => menuMusic;
         public AudioClip GameplayMusic => gameplayMusic;
@@ -77,6 +89,30 @@ namespace DustlineArena.Runtime.Audio
         public AudioClip GetFootstepClip(bool softSurface)
         {
             AudioClip[] clips = softSurface ? softSurfaceFootsteps : hardSurfaceFootsteps;
+            return clips == null || clips.Length == 0
+                ? null
+                : clips[Random.Range(0, clips.Length)];
+        }
+
+        public AudioClip GetSurfaceImpactClip(SurfaceAudioType surface)
+        {
+            AudioClip[] clips;
+            switch (surface)
+            {
+                case SurfaceAudioType.Metal:
+                    clips = metalImpacts;
+                    break;
+                case SurfaceAudioType.Wood:
+                    clips = woodImpacts;
+                    break;
+                case SurfaceAudioType.Soft:
+                    clips = softImpacts;
+                    break;
+                default:
+                    clips = concreteImpacts;
+                    break;
+            }
+
             return clips == null || clips.Length == 0
                 ? null
                 : clips[Random.Range(0, clips.Length)];

@@ -1,3 +1,4 @@
+using System.Collections;
 using DustlineArena.Runtime.Config;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -11,6 +12,7 @@ namespace DustlineArena.Runtime.Audio
         private const string MusicVolumeKey = "Dustline.Audio.Music";
         private const string SfxVolumeKey = "Dustline.Audio.SFX";
         private const string UiVolumeKey = "Dustline.Audio.UI";
+        private const string Arena01SceneName = "Dustline_Arena_01";
         private const float MusicOutputGain = 0.78f;
         private const float SfxOutputGain = 0.82f;
         private const float UiOutputGain = 0.86f;
@@ -20,8 +22,29 @@ namespace DustlineArena.Runtime.Audio
         private const float ZombiePainCooldown = 0.22f;
         private const float ZombieAttackCooldown = 0.32f;
         private const float ZombieDeathCooldown = 0.85f;
+        private const float SurfaceImpactCooldown = 0.045f;
+        private const float MusicFadeOutDuration = 0.28f;
+        private const float MusicFadeInDuration = 0.55f;
+        private const float MusicLoopFadeDuration = 1.5f;
+        private const float Arena01LoopStartTime = 1.67f;
+        private const float Arena01LoopEndTime = 55.4f;
         private const int SfxVoiceCount = 16;
         private const int ZombieVoiceCount = 3;
+
+        private static readonly string[] MetalSurfaceTokens =
+        {
+            "Metal", "Container", "Barrel", "Pipe", "Fence", "Gate", "Dumpster", "Cart", "Tank", "Rack", "Scaffold"
+        };
+
+        private static readonly string[] WoodSurfaceTokens =
+        {
+            "Wood", "Crate", "Pallet", "Plank", "Board", "Cardboard", "Box"
+        };
+
+        private static readonly string[] SoftSurfaceTokens =
+        {
+            "Soft", "Sack", "Sandbag", "Grass", "Bush", "Fern", "Flower", "Fabric"
+        };
 
         private static GameAudio instance;
         private static bool isShuttingDown;
@@ -45,6 +68,12 @@ namespace DustlineArena.Runtime.Audio
         private float nextZombiePainTime;
         private float nextZombieAttackTime;
         private float nextZombieDeathTime;
+        private float nextSurfaceImpactTime;
+        private float musicTransitionGain = 1f;
+        private float musicLoopStartTime;
+        private float musicLoopEndTime;
+        private Coroutine musicTransitionRoutine;
+        private Coroutine musicLoopRoutine;
 
         public static GameAudio Instance
         {
@@ -159,13 +188,33 @@ namespace DustlineArena.Runtime.Audio
         public static void PlayArenaCleared()
         {
             GameAudio audio = Instance;
-            audio.PlaySfxAt(audio.library == null ? null : audio.library.ArenaCleared, Vector3.zero, 0.58f, 1f);
+            audio.PlayUi(audio.library == null ? null : audio.library.ArenaCleared, 0.58f);
         }
 
         public static void PlayGameOver()
         {
             GameAudio audio = Instance;
-            audio.PlaySfxAt(audio.library == null ? null : audio.library.GameOver, Vector3.zero, 0.46f, 0.92f);
+            audio.PlayUi(audio.library == null ? null : audio.library.GameOver, 0.46f);
+        }
+
+        public static void PlaySurfaceImpact(Collider surface, Vector3 position)
+        {
+            GameAudio audio = Instance;
+            if (surface == null || !audio.TryReserve(ref audio.nextSurfaceImpactTime, SurfaceImpactCooldown))
+            {
+                return;
+            }
+
+            SurfaceAudioType surfaceType = ClassifySurface(surface);
+            AudioClip clip = audio.library == null ? null : audio.library.GetSurfaceImpactClip(surfaceType);
+            float volume = surfaceType == SurfaceAudioType.Metal
+                ? 0.18f
+                : surfaceType == SurfaceAudioType.Wood
+                    ? 0.16f
+                    : surfaceType == SurfaceAudioType.Soft
+                        ? 0.12f
+                        : 0.14f;
+            audio.PlaySfxAt(clip, position, volume, RandomPitch(0.08f));
         }
 
         public static void PlayPickup(Vector3 position)
@@ -325,6 +374,38 @@ namespace DustlineArena.Runtime.Audio
             SceneManager.sceneLoaded -= OnSceneLoaded;
         }
 
+        private void Update()
+        {
+            if (musicSource == null ||
+                musicSource.clip == null ||
+                musicTransitionRoutine != null ||
+                musicLoopRoutine != null)
+            {
+                return;
+            }
+
+            if (musicLoopEndTime > musicLoopStartTime)
+            {
+                if (!musicSource.isPlaying)
+                {
+                    musicSource.time = musicLoopStartTime;
+                    musicSource.Play();
+                }
+                else if (musicSource.time >= musicLoopEndTime)
+                {
+                    musicSource.time = musicLoopStartTime;
+                }
+
+                return;
+            }
+
+            float remaining = musicSource.clip.length - musicSource.time;
+            if (!musicSource.isPlaying || remaining <= MusicLoopFadeDuration)
+            {
+                musicLoopRoutine = StartCoroutine(RestartMusicLoop(musicSource.clip));
+            }
+        }
+
         private void OnApplicationQuit()
         {
             isShuttingDown = true;
@@ -346,7 +427,7 @@ namespace DustlineArena.Runtime.Audio
                 library = Resources.Load<GameAudioLibrary>(LibraryResourcePath);
             }
 
-            musicSource = EnsureSource("Music_Source", true);
+            musicSource = EnsureSource("Music_Source", false);
             uiSource = EnsureSource("UI_Source", false);
             sfxVoices = EnsureSfxVoices();
             zombieVoices = EnsureVoicePool("Zombie_Voices", "Zombie_Voice", ZombieVoiceCount);
@@ -385,7 +466,7 @@ namespace DustlineArena.Runtime.Audio
             if (musicSource != null)
             {
                 float pauseGain = gameplayPaused ? PausedMusicGain : 1f;
-                musicSource.volume = masterVolume * musicVolume * MusicOutputGain * pauseGain;
+                musicSource.volume = masterVolume * musicVolume * MusicOutputGain * pauseGain * musicTransitionGain;
             }
 
             if (sfxVoices != null)
@@ -462,14 +543,181 @@ namespace DustlineArena.Runtime.Audio
             }
 
             AudioClip targetClip = library.GetMusicForScene(sceneName);
+            ConfigureMusicLoop(sceneName, targetClip);
 
             if (targetClip == null || musicSource.clip == targetClip)
             {
+                if (targetClip != null && !musicSource.isPlaying)
+                {
+                    if (musicLoopEndTime > musicLoopStartTime)
+                    {
+                        musicSource.time = musicLoopStartTime;
+                        musicSource.Play();
+                        return;
+                    }
+
+                    if (musicLoopRoutine != null)
+                    {
+                        StopCoroutine(musicLoopRoutine);
+                    }
+
+                    musicLoopRoutine = StartCoroutine(RestartMusicLoop(targetClip));
+                }
+
                 return;
             }
 
+            if (musicLoopRoutine != null)
+            {
+                StopCoroutine(musicLoopRoutine);
+                musicLoopRoutine = null;
+            }
+
+            if (musicTransitionRoutine != null)
+            {
+                StopCoroutine(musicTransitionRoutine);
+            }
+
+            musicTransitionRoutine = StartCoroutine(TransitionMusic(targetClip));
+        }
+
+        private void ConfigureMusicLoop(string sceneName, AudioClip targetClip)
+        {
+            bool useArena01Loop = string.Equals(sceneName, Arena01SceneName, System.StringComparison.Ordinal) &&
+                                  targetClip != null &&
+                                  targetClip.length > Arena01LoopEndTime;
+            musicLoopStartTime = useArena01Loop ? Arena01LoopStartTime : 0f;
+            musicLoopEndTime = useArena01Loop ? Arena01LoopEndTime : 0f;
+        }
+
+        private IEnumerator TransitionMusic(AudioClip targetClip)
+        {
+            if (musicSource.isPlaying && musicSource.clip != null)
+            {
+                float startGain = musicTransitionGain;
+                float elapsed = 0f;
+                while (elapsed < MusicFadeOutDuration)
+                {
+                    elapsed += Time.unscaledDeltaTime;
+                    musicTransitionGain = Mathf.Lerp(startGain, 0f, Mathf.Clamp01(elapsed / MusicFadeOutDuration));
+                    ApplyVolumes();
+                    yield return null;
+                }
+            }
+
+            musicTransitionGain = 0f;
+            musicSource.Stop();
             musicSource.clip = targetClip;
             musicSource.Play();
+
+            float fadeElapsed = 0f;
+            while (fadeElapsed < MusicFadeInDuration)
+            {
+                fadeElapsed += Time.unscaledDeltaTime;
+                musicTransitionGain = Mathf.Clamp01(fadeElapsed / MusicFadeInDuration);
+                ApplyVolumes();
+                yield return null;
+            }
+
+            musicTransitionGain = 1f;
+            ApplyVolumes();
+            musicTransitionRoutine = null;
+        }
+
+        private IEnumerator RestartMusicLoop(AudioClip loopClip)
+        {
+            if (loopClip == null || musicSource == null || musicSource.clip != loopClip)
+            {
+                musicLoopRoutine = null;
+                yield break;
+            }
+
+            float fadeDuration = Mathf.Min(MusicLoopFadeDuration, Mathf.Max(0.2f, loopClip.length * 0.15f));
+            if (musicSource.isPlaying)
+            {
+                float startGain = musicTransitionGain;
+                float elapsed = 0f;
+                while (elapsed < fadeDuration && musicSource != null && musicSource.clip == loopClip && musicSource.isPlaying)
+                {
+                    elapsed += Time.unscaledDeltaTime;
+                    musicTransitionGain = Mathf.Lerp(startGain, 0f, Mathf.Clamp01(elapsed / fadeDuration));
+                    ApplyVolumes();
+                    yield return null;
+                }
+            }
+
+            if (musicSource == null || musicSource.clip != loopClip)
+            {
+                musicLoopRoutine = null;
+                yield break;
+            }
+
+            musicTransitionGain = 0f;
+            musicSource.Stop();
+            musicSource.time = 0f;
+            musicSource.Play();
+
+            float fadeElapsed = 0f;
+            while (fadeElapsed < fadeDuration && musicSource != null && musicSource.clip == loopClip)
+            {
+                fadeElapsed += Time.unscaledDeltaTime;
+                musicTransitionGain = Mathf.Clamp01(fadeElapsed / fadeDuration);
+                ApplyVolumes();
+                yield return null;
+            }
+
+            musicTransitionGain = 1f;
+            ApplyVolumes();
+            musicLoopRoutine = null;
+        }
+
+        private static SurfaceAudioType ClassifySurface(Collider surface)
+        {
+            string identity = string.Empty;
+            Transform current = surface.transform;
+            for (int i = 0; i < 4 && current != null; i++)
+            {
+                identity += current.name + " ";
+                current = current.parent;
+            }
+
+            Renderer renderer = surface.GetComponent<Renderer>();
+            if (renderer == null)
+            {
+                renderer = surface.GetComponentInParent<Renderer>();
+            }
+
+            if (renderer != null && renderer.sharedMaterial != null)
+            {
+                identity += renderer.sharedMaterial.name;
+            }
+
+            if (ContainsAny(identity, MetalSurfaceTokens))
+            {
+                return SurfaceAudioType.Metal;
+            }
+
+            if (ContainsAny(identity, WoodSurfaceTokens))
+            {
+                return SurfaceAudioType.Wood;
+            }
+
+            return ContainsAny(identity, SoftSurfaceTokens)
+                ? SurfaceAudioType.Soft
+                : SurfaceAudioType.Concrete;
+        }
+
+        private static bool ContainsAny(string value, string[] tokens)
+        {
+            for (int i = 0; i < tokens.Length; i++)
+            {
+                if (value.IndexOf(tokens[i], System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void PlayUi(AudioClip clip, float volumeScale)

@@ -71,6 +71,30 @@ namespace DustlineArena.Editor
                 "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_grass_000.ogg",
                 "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_grass_001.ogg",
                 "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/footstep_grass_002.ogg");
+            SetClips(
+                serializedLibrary,
+                "concreteImpacts",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactGeneric_light_000.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactGeneric_light_001.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactGeneric_light_002.ogg");
+            SetClips(
+                serializedLibrary,
+                "metalImpacts",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactMetal_light_001.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactMetal_light_002.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactMetal_light_003.ogg");
+            SetClips(
+                serializedLibrary,
+                "woodImpacts",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactWood_medium_000.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactWood_medium_001.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactWood_medium_002.ogg");
+            SetClips(
+                serializedLibrary,
+                "softImpacts",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactSoft_medium_000.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactSoft_medium_001.ogg",
+                "Assets/_Project/Audio/SFX/Impacts/KenneyImpact/impactSoft_medium_002.ogg");
 
             serializedLibrary.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(library);

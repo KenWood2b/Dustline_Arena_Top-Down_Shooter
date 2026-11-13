@@ -1,4 +1,5 @@
 using DustlineArena.Runtime.Common;
+using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Feedback;
 using UnityEngine;
 
@@ -164,6 +165,10 @@ namespace DustlineArena.Runtime.Weapons
             if (hitDamageable)
             {
                 damageable.TakeDamage(new DamageInfo(damage.Amount, damage.Source, sourceTeam, point, direction));
+            }
+            else
+            {
+                GameAudio.PlaySurfaceImpact(other, point);
             }
 
             Despawn();

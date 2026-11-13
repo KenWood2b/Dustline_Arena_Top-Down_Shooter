@@ -1,6 +1,8 @@
+using System.Collections;
 using DustlineArena.Runtime.Common;
 using DustlineArena.Runtime.Audio;
 using DustlineArena.Runtime.Health;
+using DustlineArena.Runtime.Progression;
 using DustlineArena.Runtime.Spawning;
 using DustlineArena.Runtime.UI;
 using DustlineArena.Runtime.Weapons;
@@ -8,6 +10,7 @@ using DustlineArena.Runtime.Camera;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -16,6 +19,9 @@ namespace DustlineArena.Runtime.Player
     [DisallowMultipleComponent]
     public sealed class CombatHud : MonoBehaviour
     {
+        private const string MainMenuSceneName = "Dustline_MainMenu";
+        private const float LevelCompleteOverlayDelay = 5f;
+
         [SerializeField] private HealthComponent health;
         [SerializeField] private ProjectileWeapon weapon;
         [SerializeField] private PlayerGrenadeController grenades;
@@ -49,17 +55,21 @@ namespace DustlineArena.Runtime.Player
         private TMP_Text dodgeLabel;
         private TMP_Text waveValue;
         private TMP_Text enemyValue;
+        private TMP_Text missionValue;
+        private TMP_Text previousArenaValue;
         private TMP_Text healthDeltaValue;
         private TMP_Text bannerTitle;
         private TMP_Text bannerSubtitle;
         private TMP_Text clearTitle;
         private TMP_Text clearSubtitle;
-        private TMP_Text clearCountdown;
+        private TMP_Text clearStats;
+        private TMP_Text clearHint;
         private TMP_Text pauseTitle;
         private TMP_Text pauseSubtitle;
         private TMP_Text pauseHint;
         private TMP_Text deathTitle;
         private TMP_Text deathSubtitle;
+        private TMP_Text deathStats;
         private RectTransform reloadGroup;
         private RectTransform dodgeRoot;
         private RectTransform healthDeltaRect;
@@ -76,6 +86,8 @@ namespace DustlineArena.Runtime.Player
         private RectTransform hitMarkerRoot;
         private RectTransform bannerRoot;
         private RectTransform pauseRoot;
+        private RectTransform pauseMainContent;
+        private RectTransform pauseSettingsContent;
         private RectTransform clearRoot;
         private RectTransform deathRoot;
         private CanvasGroup crosshairGroup;
@@ -85,6 +97,15 @@ namespace DustlineArena.Runtime.Player
         private CanvasGroup pauseGroup;
         private CanvasGroup clearGroup;
         private CanvasGroup deathGroup;
+        private GraphicRaycaster hudRaycaster;
+        private Button clearNextButton;
+        private Button clearMenuButton;
+        private Button pauseResumeButton;
+        private Button pauseSettingsButton;
+        private Button pauseSettingsBackButton;
+        private Button deathRestartButton;
+        private Button deathMenuButton;
+        private Slider pauseMasterSlider;
         private GameObject hudRoot;
         private float nextWorldRefresh;
         private float lastHealthNormalized = -1f;
@@ -97,10 +118,17 @@ namespace DustlineArena.Runtime.Player
         private float crosshairFireBloom;
         private bool isGameOver;
         private bool isLevelComplete;
+        private bool isLevelCompletePending;
         private bool isPaused;
+        private bool pauseSettingsOpen;
         private float prePauseTimeScale = 1f;
-        private float levelCompleteEndTime;
+        private float arenaStartTime;
+        private float arenaElapsedTime;
+        private float arenaDamageTaken;
+        private int arenaKills;
+        private int arenaIndex;
         private string levelCompleteNextScene;
+        private Coroutine levelCompleteRoutine;
         private bool cursorWasVisible;
 
         private void Awake()
@@ -117,6 +145,9 @@ namespace DustlineArena.Runtime.Player
             targetCamera = targetCamera == null ? UnityEngine.Camera.main : targetCamera;
             cameraFollow = cameraFollow == null && targetCamera != null ? targetCamera.GetComponent<TopDownCameraFollow>() : cameraFollow;
             cameraFollow = cameraFollow == null ? FindObjectOfType<TopDownCameraFollow>() : cameraFollow;
+            arenaIndex = OperationProgress.GetArenaIndex(SceneManager.GetActiveScene().name);
+            OperationProgress.EnsureOperation();
+            arenaStartTime = Time.time;
             BuildHud();
         }
 
@@ -168,9 +199,13 @@ namespace DustlineArena.Runtime.Player
 
         private void OnDisable()
         {
-            if (isPaused)
+            CancelPendingLevelComplete();
+
+            if (isPaused || isLevelComplete || isGameOver)
             {
                 isPaused = false;
+                isLevelComplete = false;
+                isGameOver = false;
                 Time.timeScale = prePauseTimeScale <= 0f ? 1f : prePauseTimeScale;
                 GameAudio.SetGameplayPaused(false);
             }
@@ -225,25 +260,43 @@ namespace DustlineArena.Runtime.Player
                 {
                     RestartCurrentScene();
                 }
+                else if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    LoadMainMenu();
+                }
 
                 return;
             }
 
             if (isLevelComplete)
             {
-                RefreshLevelCompleteOverlay();
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
+                {
+                    ContinueAfterArena();
+                }
+                else if (Input.GetKeyDown(KeyCode.Escape))
+                {
+                    ReturnToMainMenu();
+                }
+
                 return;
             }
 
             if (Input.GetKeyDown(KeyCode.Escape))
             {
+                if (isPaused && pauseSettingsOpen)
+                {
+                    ShowPauseMainMenu(true);
+                    return;
+                }
+
                 SetPaused(!isPaused);
                 return;
             }
 
             if (isPaused)
             {
-                if (Input.GetKeyDown(KeyCode.R))
+                if (!pauseSettingsOpen && Input.GetKeyDown(KeyCode.R))
                 {
                     RestartCurrentScene();
                 }
@@ -289,8 +342,8 @@ namespace DustlineArena.Runtime.Player
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 0.5f;
 
-            GraphicRaycaster raycaster = canvasObject.GetComponent<GraphicRaycaster>();
-            raycaster.enabled = false;
+            hudRaycaster = canvasObject.GetComponent<GraphicRaycaster>();
+            hudRaycaster.enabled = false;
 
             RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
             RectTransform safeArea = DustlineUiTheme.CreateRect(
@@ -426,11 +479,11 @@ namespace DustlineArena.Runtime.Player
             AddAccent(dodgeRoot);
 
             RectTransform labelRect = DustlineUiTheme.CreateRect(
-                "Label", dodgeRoot, Vector2.zero, Vector2.one, new Vector2(0f, 0.5f), new Vector2(128f, 20f), new Vector2(18f, -14f));
+                "Label", dodgeRoot, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(128f, 20f), new Vector2(18f, -9f));
             dodgeLabel = DustlineUiTheme.AddText(labelRect, "DODGE  [SPACE]", 12f, DustlineUiTheme.Muted, TextAlignmentOptions.Left, FontStyles.Bold);
 
             RectTransform valueRect = DustlineUiTheme.CreateRect(
-                "Value", dodgeRoot, Vector2.one, Vector2.one, Vector2.one, new Vector2(84f, 24f), new Vector2(-16f, -12f));
+                "Value", dodgeRoot, Vector2.one, Vector2.one, Vector2.one, new Vector2(84f, 20f), new Vector2(-16f, -9f));
             dodgeValue = DustlineUiTheme.AddText(valueRect, "READY", 16f, DustlineUiTheme.Gold, TextAlignmentOptions.Right, FontStyles.Bold);
 
             RectTransform barBackground = DustlineUiTheme.CreateRect(
@@ -509,17 +562,25 @@ namespace DustlineArena.Runtime.Player
         private void BuildWave(RectTransform parent)
         {
             RectTransform panel = DustlineUiTheme.CreateRect(
-                "Wave", parent, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(390f, 76f), new Vector2(0f, -24f));
+                "Mission_Progress", parent, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(470f, 130f), new Vector2(0f, -24f));
             DustlineUiTheme.AddImage(panel, "PanelDark", DustlineUiTheme.Background, true);
             AddAccent(panel);
 
+            RectTransform missionRect = DustlineUiTheme.CreateRect(
+                "Mission_Value", panel, new Vector2(0f, 0.66f), Vector2.one, new Vector2(0.5f, 0.5f), new Vector2(-44f, -8f), Vector2.zero);
+            missionValue = DustlineUiTheme.AddText(missionRect, "ARENA 01 / 05  //  FREIGHT YARD", 16f, DustlineUiTheme.Gold, TextAlignmentOptions.Center, FontStyles.Bold);
+
             RectTransform waveRect = DustlineUiTheme.CreateRect(
-                "Wave_Value", panel, Vector2.zero, new Vector2(0.54f, 1f), new Vector2(0f, 0.5f), new Vector2(-18f, -12f), new Vector2(24f, -2f));
-            waveValue = DustlineUiTheme.AddText(waveRect, "WAVE 1 / 1", 22f, DustlineUiTheme.Gold, TextAlignmentOptions.Left, FontStyles.Bold);
+                "Wave_Value", panel, new Vector2(0f, 0.31f), new Vector2(0.54f, 0.66f), new Vector2(0f, 0.5f), new Vector2(-18f, -8f), new Vector2(24f, 0f));
+            waveValue = DustlineUiTheme.AddText(waveRect, "WAVE 1 / 1", 21f, DustlineUiTheme.Text, TextAlignmentOptions.Left, FontStyles.Bold);
 
             RectTransform enemyRect = DustlineUiTheme.CreateRect(
-                "Enemy_Value", panel, new Vector2(0.54f, 0f), Vector2.one, new Vector2(1f, 0.5f), new Vector2(-18f, -12f), new Vector2(-24f, -2f));
+                "Enemy_Value", panel, new Vector2(0.54f, 0.31f), new Vector2(1f, 0.66f), new Vector2(1f, 0.5f), new Vector2(-18f, -8f), new Vector2(-24f, 0f));
             enemyValue = DustlineUiTheme.AddText(enemyRect, "0 HOSTILES", 18f, DustlineUiTheme.Text, TextAlignmentOptions.Right, FontStyles.Bold);
+
+            RectTransform previousRect = DustlineUiTheme.CreateRect(
+                "Previous_Arena", panel, Vector2.zero, new Vector2(1f, 0.31f), new Vector2(0.5f, 0.5f), new Vector2(-44f, -6f), Vector2.zero);
+            previousArenaValue = DustlineUiTheme.AddText(previousRect, "OPERATION START", 13f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
         }
 
         private void BuildCrosshair(RectTransform parent)
@@ -668,40 +729,91 @@ namespace DustlineArena.Runtime.Player
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(520f, 238f),
+                new Vector2(640f, 720f),
                 Vector2.zero);
             DustlineUiTheme.AddImage(pausePanel, "PanelDark", DustlineUiTheme.Background, true);
             AddAccent(pausePanel);
 
+            pauseMainContent = DustlineUiTheme.CreateRect(
+                "Main",
+                pausePanel,
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero);
+
             RectTransform pauseTitleRect = DustlineUiTheme.CreateRect(
                 "Title",
-                pausePanel,
+                pauseMainContent,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(440f, 58f),
-                new Vector2(0f, 54f));
-            pauseTitle = DustlineUiTheme.AddText(pauseTitleRect, "PAUSED", 42f, DustlineUiTheme.Gold, TextAlignmentOptions.Center, FontStyles.Bold);
+                new Vector2(540f, 64f),
+                new Vector2(0f, 270f));
+            pauseTitle = DustlineUiTheme.AddText(pauseTitleRect, "PAUSED", 46f, DustlineUiTheme.Gold, TextAlignmentOptions.Center, FontStyles.Bold);
 
             RectTransform pauseSubtitleRect = DustlineUiTheme.CreateRect(
                 "Subtitle",
-                pausePanel,
+                pauseMainContent,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(440f, 30f),
-                new Vector2(0f, 6f));
+                new Vector2(540f, 30f),
+                new Vector2(0f, 220f));
             pauseSubtitle = DustlineUiTheme.AddText(pauseSubtitleRect, "TAKE A BREATH", 20f, DustlineUiTheme.Text, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            pauseResumeButton = CreateClearButton(pauseMainContent, "RESUME", new Vector2(0f, 124f), () => SetPaused(false), 480f);
+            pauseSettingsButton = CreateClearButton(pauseMainContent, "SETTINGS", new Vector2(0f, 42f), OpenPauseSettings, 480f);
+            CreateClearButton(pauseMainContent, "RESTART ARENA", new Vector2(0f, -40f), RestartCurrentScene, 480f);
+            CreateClearButton(pauseMainContent, "MAIN MENU", new Vector2(0f, -122f), LoadMainMenu, 480f);
 
             RectTransform pauseHintRect = DustlineUiTheme.CreateRect(
                 "Hint",
+                pauseMainContent,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(540f, 28f),
+                new Vector2(0f, -272f));
+            pauseHint = DustlineUiTheme.AddText(pauseHintRect, "ESC  RESUME     R  RESTART", 17f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            pauseSettingsContent = DustlineUiTheme.CreateRect(
+                "Audio_Settings",
                 pausePanel,
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero);
+
+            RectTransform settingsTitleRect = DustlineUiTheme.CreateRect(
+                "Title",
+                pauseSettingsContent,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(440f, 28f),
-                new Vector2(0f, -56f));
-            pauseHint = DustlineUiTheme.AddText(pauseHintRect, "ESC  RESUME     R  RESTART", 18f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
+                new Vector2(540f, 64f),
+                new Vector2(0f, 270f));
+            DustlineUiTheme.AddText(settingsTitleRect, "AUDIO SETTINGS", 40f, DustlineUiTheme.Gold, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            RectTransform settingsSubtitleRect = DustlineUiTheme.CreateRect(
+                "Subtitle",
+                pauseSettingsContent,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(540f, 30f),
+                new Vector2(0f, 220f));
+            DustlineUiTheme.AddText(settingsSubtitleRect, "CHANGES ARE SAVED AUTOMATICALLY", 16f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            GameAudio audio = GameAudio.Instance;
+            pauseMasterSlider = CreatePauseVolumeSlider(pauseSettingsContent, "MASTER", audio.MasterVolume, new Vector2(0f, 124f), value => audio.MasterVolume = value);
+            CreatePauseVolumeSlider(pauseSettingsContent, "MUSIC", audio.MusicVolume, new Vector2(0f, 38f), value => audio.MusicVolume = value);
+            CreatePauseVolumeSlider(pauseSettingsContent, "SFX", audio.SfxVolume, new Vector2(0f, -48f), value => audio.SfxVolume = value);
+            CreatePauseVolumeSlider(pauseSettingsContent, "UI", audio.UiVolume, new Vector2(0f, -134f), value => audio.UiVolume = value);
+            pauseSettingsBackButton = CreateClearButton(pauseSettingsContent, "BACK", new Vector2(0f, -250f), () => ShowPauseMainMenu(true), 480f, false);
+            pauseSettingsContent.gameObject.SetActive(false);
 
             clearRoot = DustlineUiTheme.CreateRect(
                 "Area_Clear_Overlay",
@@ -717,45 +829,69 @@ namespace DustlineArena.Runtime.Player
             clearGroup.blocksRaycasts = false;
             clearGroup.interactable = false;
 
-            RectTransform clearAccent = DustlineUiTheme.CreateRect(
-                "Accent",
+            RectTransform clearPanel = DustlineUiTheme.CreateRect(
+                "Panel",
                 clearRoot,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(360f, 5f),
-                new Vector2(0f, 108f));
-            DustlineUiTheme.AddImage(clearAccent, "AccentGold", DustlineUiTheme.Gold, true);
+                new Vector2(780f, 620f),
+                Vector2.zero);
+            DustlineUiTheme.AddImage(clearPanel, "PanelDark", DustlineUiTheme.Background, true);
+            AddAccent(clearPanel);
 
             RectTransform clearTitleRect = DustlineUiTheme.CreateRect(
                 "Title",
-                clearRoot,
+                clearPanel,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(760f, 92f),
-                new Vector2(0f, 48f));
-            clearTitle = DustlineUiTheme.AddText(clearTitleRect, "AREA CLEARED", 64f, DustlineUiTheme.Gold, TextAlignmentOptions.Center, FontStyles.Bold);
+                new Vector2(700f, 72f),
+                new Vector2(0f, 218f));
+            clearTitle = DustlineUiTheme.AddText(clearTitleRect, "AREA CLEARED", 52f, DustlineUiTheme.Gold, TextAlignmentOptions.Center, FontStyles.Bold);
 
             RectTransform clearSubtitleRect = DustlineUiTheme.CreateRect(
                 "Subtitle",
-                clearRoot,
+                clearPanel,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(820f, 36f),
-                new Vector2(0f, -22f));
+                new Vector2(700f, 34f),
+                new Vector2(0f, 158f));
             clearSubtitle = DustlineUiTheme.AddText(clearSubtitleRect, "ALL WAVES COMPLETE", 24f, DustlineUiTheme.Text, TextAlignmentOptions.Center, FontStyles.Bold);
 
-            RectTransform clearCountdownRect = DustlineUiTheme.CreateRect(
-                "Countdown",
-                clearRoot,
+            RectTransform statsLabelRect = DustlineUiTheme.CreateRect(
+                "Stats_Label",
+                clearPanel,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(560f, 32f),
-                new Vector2(0f, -72f));
-            clearCountdown = DustlineUiTheme.AddText(clearCountdownRect, "DEPLOYING...", 22f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
+                new Vector2(650f, 26f),
+                new Vector2(0f, 94f));
+            DustlineUiTheme.AddText(statsLabelRect, "AFTER ACTION REPORT", 17f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            RectTransform clearStatsRect = DustlineUiTheme.CreateRect(
+                "Stats",
+                clearPanel,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(650f, 72f),
+                new Vector2(0f, 40f));
+            clearStats = DustlineUiTheme.AddText(clearStatsRect, "HOSTILES  0     DAMAGE  0     TIME  00:00", 22f, DustlineUiTheme.Text, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            clearNextButton = CreateClearButton(clearPanel, "NEXT ARENA", new Vector2(-166f, -86f), ContinueAfterArena);
+            clearMenuButton = CreateClearButton(clearPanel, "MAIN MENU", new Vector2(166f, -86f), ReturnToMainMenu);
+
+            RectTransform clearHintRect = DustlineUiTheme.CreateRect(
+                "Hint",
+                clearPanel,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(650f, 28f),
+                new Vector2(0f, -190f));
+            clearHint = DustlineUiTheme.AddText(clearHintRect, "ENTER  CONTINUE     ESC  MAIN MENU", 17f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
 
             deathRoot = DustlineUiTheme.CreateRect(
                 "Death_Overlay",
@@ -771,25 +907,69 @@ namespace DustlineArena.Runtime.Player
             deathGroup.blocksRaycasts = false;
             deathGroup.interactable = false;
 
-            RectTransform deathTitleRect = DustlineUiTheme.CreateRect(
-                "Title",
+            RectTransform deathPanel = DustlineUiTheme.CreateRect(
+                "Panel",
                 deathRoot,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(520f, 76f),
-                new Vector2(0f, 42f));
-            deathTitle = DustlineUiTheme.AddText(deathTitleRect, "YOU DIED", 58f, DustlineUiTheme.Danger, TextAlignmentOptions.Center, FontStyles.Bold);
+                new Vector2(760f, 590f),
+                Vector2.zero);
+            DustlineUiTheme.AddImage(deathPanel, "PanelDark", DustlineUiTheme.Background, true);
+            AddAccent(deathPanel);
+
+            RectTransform deathTitleRect = DustlineUiTheme.CreateRect(
+                "Title",
+                deathPanel,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(680f, 76f),
+                new Vector2(0f, 206f));
+            deathTitle = DustlineUiTheme.AddText(deathTitleRect, "OPERATION FAILED", 52f, DustlineUiTheme.Danger, TextAlignmentOptions.Center, FontStyles.Bold);
 
             RectTransform deathSubtitleRect = DustlineUiTheme.CreateRect(
                 "Subtitle",
-                deathRoot,
+                deathPanel,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(640f, 32f),
-                new Vector2(0f, -26f));
-            deathSubtitle = DustlineUiTheme.AddText(deathSubtitleRect, "PRESS ENTER TO RESTART", 21f, DustlineUiTheme.Text, TextAlignmentOptions.Center, FontStyles.Bold);
+                new Vector2(680f, 32f),
+                new Vector2(0f, 150f));
+            deathSubtitle = DustlineUiTheme.AddText(deathSubtitleRect, "THE DUSTLINE CLAIMED ANOTHER RUN", 20f, DustlineUiTheme.Text, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            RectTransform deathStatsLabelRect = DustlineUiTheme.CreateRect(
+                "Stats_Label",
+                deathPanel,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(650f, 28f),
+                new Vector2(0f, 82f));
+            DustlineUiTheme.AddText(deathStatsLabelRect, "COMBAT REPORT", 17f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            RectTransform deathStatsRect = DustlineUiTheme.CreateRect(
+                "Stats",
+                deathPanel,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(650f, 68f),
+                new Vector2(0f, 28f));
+            deathStats = DustlineUiTheme.AddText(deathStatsRect, "ARENA 01 / 05   WAVE 1 / 4   HOSTILES 00   TIME 00:00", 19f, DustlineUiTheme.Text, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            deathRestartButton = CreateClearButton(deathPanel, "RETRY ARENA", new Vector2(-166f, -96f), RestartCurrentScene);
+            deathMenuButton = CreateClearButton(deathPanel, "MAIN MENU", new Vector2(166f, -96f), LoadMainMenu);
+
+            RectTransform deathHintRect = DustlineUiTheme.CreateRect(
+                "Hint",
+                deathPanel,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(650f, 28f),
+                new Vector2(0f, -206f));
+            DustlineUiTheme.AddText(deathHintRect, "ENTER  RETRY     ESC  MAIN MENU", 17f, DustlineUiTheme.Muted, TextAlignmentOptions.Center, FontStyles.Bold);
         }
 
         private static void AddAccent(RectTransform panel)
@@ -799,12 +979,186 @@ namespace DustlineArena.Runtime.Player
             DustlineUiTheme.AddImage(accent, "AccentGold", DustlineUiTheme.Gold, true);
         }
 
+        private static Button CreateClearButton(
+            Transform parent,
+            string label,
+            Vector2 position,
+            UnityEngine.Events.UnityAction action,
+            float width = 300f,
+            bool playConfirmSound = true)
+        {
+            RectTransform rect = DustlineUiTheme.CreateRect(
+                $"{label.Replace(' ', '_')}_Button",
+                parent,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(width, 68f),
+                position);
+            Color idleColor = new Color(0.075f, 0.085f, 0.095f, 0.98f);
+            Image background = DustlineUiTheme.AddImage(rect, "PanelLight", idleColor, true);
+            background.raycastTarget = true;
+
+            Button button = rect.gameObject.AddComponent<Button>();
+            button.transition = Selectable.Transition.None;
+            button.targetGraphic = background;
+            button.onClick.AddListener(() =>
+            {
+                if (playConfirmSound)
+                {
+                    GameAudio.PlayUiConfirm();
+                }
+
+                action?.Invoke();
+            });
+
+            RectTransform accentRect = DustlineUiTheme.CreateRect(
+                "Accent",
+                rect,
+                new Vector2(0f, 0f),
+                new Vector2(0f, 1f),
+                new Vector2(0f, 0.5f),
+                new Vector2(5f, -14f),
+                new Vector2(14f, 0f));
+            Image accent = DustlineUiTheme.AddImage(accentRect, null, DustlineUiTheme.Gold, false);
+
+            RectTransform labelRect = DustlineUiTheme.CreateRect(
+                "Label",
+                rect,
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(-60f, 0f),
+                new Vector2(20f, 0f));
+            TMP_Text text = DustlineUiTheme.AddText(labelRect, label, 21f, DustlineUiTheme.Text, TextAlignmentOptions.Center, FontStyles.Bold);
+
+            MenuButtonFeedback feedback = rect.gameObject.AddComponent<MenuButtonFeedback>();
+            feedback.Initialize(background, accent, text, idleColor, new Color(0.13f, 0.14f, 0.15f, 1f));
+            return button;
+        }
+
+        private static Slider CreatePauseVolumeSlider(
+            Transform parent,
+            string label,
+            float initialValue,
+            Vector2 position,
+            System.Action<float> onChanged)
+        {
+            RectTransform row = DustlineUiTheme.CreateRect(
+                $"{label}_Row",
+                parent,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(500f, 72f),
+                position);
+
+            RectTransform labelRect = DustlineUiTheme.CreateRect(
+                "Label",
+                row,
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(180f, 28f),
+                Vector2.zero);
+            DustlineUiTheme.AddText(labelRect, label, 18f, DustlineUiTheme.Text, TextAlignmentOptions.Left, FontStyles.Bold);
+
+            RectTransform valueRect = DustlineUiTheme.CreateRect(
+                "Value",
+                row,
+                Vector2.one,
+                Vector2.one,
+                Vector2.one,
+                new Vector2(80f, 28f),
+                Vector2.zero);
+            TMP_Text valueText = DustlineUiTheme.AddText(
+                valueRect,
+                $"{Mathf.RoundToInt(initialValue * 100f):000}",
+                18f,
+                DustlineUiTheme.Gold,
+                TextAlignmentOptions.Right,
+                FontStyles.Bold);
+
+            RectTransform sliderRect = DustlineUiTheme.CreateRect(
+                "Slider",
+                row,
+                new Vector2(0f, 0f),
+                new Vector2(1f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(0f, 28f),
+                new Vector2(0f, 4f));
+
+            RectTransform trackRect = DustlineUiTheme.CreateRect(
+                "Track",
+                sliderRect,
+                new Vector2(0f, 0.5f),
+                new Vector2(1f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(-16f, 10f),
+                Vector2.zero);
+            DustlineUiTheme.AddImage(trackRect, null, new Color(0.015f, 0.018f, 0.02f, 1f), false);
+
+            RectTransform fillArea = DustlineUiTheme.CreateRect(
+                "Fill_Area",
+                sliderRect,
+                new Vector2(0f, 0.5f),
+                new Vector2(1f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(-26f, 10f),
+                Vector2.zero);
+            RectTransform fillRect = DustlineUiTheme.CreateRect(
+                "Fill",
+                fillArea,
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero);
+            DustlineUiTheme.AddImage(fillRect, null, DustlineUiTheme.Gold, false);
+
+            RectTransform handleArea = DustlineUiTheme.CreateRect(
+                "Handle_Area",
+                sliderRect,
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(-26f, 0f),
+                Vector2.zero);
+            RectTransform handleRect = DustlineUiTheme.CreateRect(
+                "Handle",
+                handleArea,
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(24f, 24f),
+                Vector2.zero);
+            Image handle = DustlineUiTheme.AddImage(handleRect, null, DustlineUiTheme.Text, false);
+            handle.raycastTarget = true;
+
+            Slider slider = sliderRect.gameObject.AddComponent<Slider>();
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.wholeNumbers = false;
+            slider.fillRect = fillRect;
+            slider.handleRect = handleRect;
+            slider.targetGraphic = handle;
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.SetValueWithoutNotify(initialValue);
+            slider.onValueChanged.AddListener(value =>
+            {
+                valueText.text = $"{Mathf.RoundToInt(value * 100f):000}";
+                onChanged?.Invoke(value);
+            });
+            return slider;
+        }
+
         private void RefreshAll()
         {
             RefreshHealth();
             RefreshWeapon();
             RefreshGrenades();
             RefreshDodgeCooldown();
+            RefreshMissionProgress();
             RefreshWave();
         }
 
@@ -813,6 +1167,7 @@ namespace DustlineArena.Runtime.Player
             RefreshHealth();
             if (args.Delta < 0f)
             {
+                arenaDamageTaken += -args.Delta;
                 PunchText(healthValue, new Vector3(0.16f, 0.16f, 0f), 0.16f);
                 ShowDamageFlash(-args.Delta);
             }
@@ -824,6 +1179,7 @@ namespace DustlineArena.Runtime.Player
 
         private void OnPlayerDied()
         {
+            CancelPendingLevelComplete();
             RefreshHealth();
             GameAudio.PlayGameOver();
             ShowDeathOverlay();
@@ -1111,14 +1467,45 @@ namespace DustlineArena.Runtime.Player
 
         private void OnEnemyKilled(int totalKills)
         {
+            arenaKills = Mathf.Max(arenaKills, totalKills);
             RefreshWave();
         }
 
         private void OnAllWavesCompleted()
         {
             RefreshWave();
+            if (isGameOver || isLevelComplete || isLevelCompletePending)
+            {
+                return;
+            }
+
             GameAudio.PlayArenaCleared();
-            ShowLevelCompleteOverlay();
+            ShowBanner("AREA SECURED", "STAND BY FOR EXTRACTION");
+            isLevelCompletePending = true;
+            levelCompleteRoutine = StartCoroutine(ShowLevelCompleteAfterDelay());
+        }
+
+        private IEnumerator ShowLevelCompleteAfterDelay()
+        {
+            yield return new WaitForSeconds(LevelCompleteOverlayDelay);
+            levelCompleteRoutine = null;
+            isLevelCompletePending = false;
+
+            if (!isGameOver)
+            {
+                ShowLevelCompleteOverlay();
+            }
+        }
+
+        private void CancelPendingLevelComplete()
+        {
+            if (levelCompleteRoutine != null)
+            {
+                StopCoroutine(levelCompleteRoutine);
+                levelCompleteRoutine = null;
+            }
+
+            isLevelCompletePending = false;
         }
 
         private void OnAnyDamaged(HealthComponent target, DamageInfo damage)
@@ -1167,6 +1554,27 @@ namespace DustlineArena.Runtime.Player
 
             lastWaveIndex = current;
             lastActiveEnemies = waveSpawner.ActiveEnemyCount;
+        }
+
+        private void RefreshMissionProgress()
+        {
+            if (missionValue != null)
+            {
+                missionValue.text = $"ARENA {arenaIndex:00} / {OperationProgress.TotalArenas:00}  //  {OperationProgress.GetSectorName(arenaIndex)}";
+            }
+
+            if (previousArenaValue == null)
+            {
+                return;
+            }
+
+            if (OperationProgress.TryGetArenaResult(arenaIndex - 1, out ArenaRunResult previous))
+            {
+                previousArenaValue.text = $"LAST: ARENA {previous.ArenaIndex:00}  //  {previous.Kills:00} HOSTILES  //  {FormatElapsedTime(previous.Duration)}";
+                return;
+            }
+
+            previousArenaValue.text = "OPERATION START  //  5 SECTORS";
         }
 
         private void OnWeaponFired()
@@ -1337,20 +1745,35 @@ namespace DustlineArena.Runtime.Player
 
         private void ShowLevelCompleteOverlay()
         {
-            if (isGameOver || clearRoot == null || clearGroup == null || clearTitle == null || clearSubtitle == null || clearCountdown == null)
+            if (isGameOver || isLevelComplete || clearRoot == null || clearGroup == null || clearTitle == null || clearSubtitle == null)
             {
                 ShowBanner("AREA CLEARED", "ALL WAVES COMPLETE");
                 return;
             }
 
             isLevelComplete = true;
+            arenaElapsedTime = Mathf.Max(0f, Time.time - arenaStartTime);
+            OperationProgress.RecordArenaResult(arenaIndex, arenaKills, arenaDamageTaken, arenaElapsedTime);
             sceneTransition = sceneTransition == null && waveSpawner != null ? waveSpawner.GetComponent<SceneWaveTransition>() : sceneTransition;
             sceneTransition = sceneTransition == null ? FindObjectOfType<SceneWaveTransition>() : sceneTransition;
 
             bool hasNextScene = sceneTransition != null && sceneTransition.HasNextScene;
             levelCompleteNextScene = hasNextScene ? sceneTransition.NextSceneName : string.Empty;
-            float delay = hasNextScene ? Mathf.Max(0f, sceneTransition.LoadDelay) : 0f;
-            levelCompleteEndTime = Time.unscaledTime + delay;
+
+            prePauseTimeScale = Time.timeScale <= 0f ? 1f : Time.timeScale;
+            Time.timeScale = 0f;
+            GameAudio.SetGameplayPaused(true);
+            Cursor.visible = true;
+            EnsureEventSystem();
+            if (hudRaycaster != null)
+            {
+                hudRaycaster.enabled = true;
+            }
+
+            if (crosshairGroup != null)
+            {
+                crosshairGroup.alpha = 0f;
+            }
 
             DOTween.Kill(bannerRoot);
             DOTween.Kill(bannerGroup);
@@ -1363,7 +1786,35 @@ namespace DustlineArena.Runtime.Player
             clearSubtitle.text = hasNextScene
                 ? $"NEXT: {FormatSceneName(levelCompleteNextScene)}"
                 : "ALL AREAS SECURED";
-            RefreshLevelCompleteOverlay();
+            if (clearStats != null)
+            {
+                OperationTotals totals = OperationProgress.GetTotals();
+                clearStats.text =
+                    $"SECTOR {arenaIndex:00}   HOSTILES {arenaKills:00}   DAMAGE {arenaDamageTaken:0}   TIME {FormatElapsedTime(arenaElapsedTime)}\n" +
+                    $"OPERATION   {totals.ArenasCleared} / {OperationProgress.TotalArenas} CLEARED   HOSTILES {totals.Kills:00}   TIME {FormatElapsedTime(totals.Duration)}";
+            }
+
+            if (clearHint != null)
+            {
+                clearHint.text = hasNextScene
+                    ? "ENTER  NEXT ARENA     ESC  MAIN MENU"
+                    : "ENTER  COMPLETE OPERATION";
+            }
+
+            if (clearNextButton != null)
+            {
+                clearNextButton.gameObject.SetActive(hasNextScene);
+            }
+
+            if (clearMenuButton != null)
+            {
+                clearMenuButton.GetComponent<RectTransform>().anchoredPosition = hasNextScene
+                    ? new Vector2(166f, -86f)
+                    : new Vector2(0f, -86f);
+            }
+
+            clearGroup.blocksRaycasts = true;
+            clearGroup.interactable = true;
 
             DOTween.Kill(clearRoot);
             DOTween.Kill(clearGroup);
@@ -1377,30 +1828,69 @@ namespace DustlineArena.Runtime.Player
                 .SetEase(Ease.OutQuad));
             sequence.Join(DOTween.To(() => clearRoot.localScale, value => clearRoot.localScale = value, Vector3.one, 0.34f)
                 .SetEase(Ease.OutCubic));
+
+            EventSystem.current?.SetSelectedGameObject(hasNextScene
+                ? clearNextButton?.gameObject
+                : clearMenuButton?.gameObject);
         }
 
-        private void RefreshLevelCompleteOverlay()
+        private void ContinueAfterArena()
         {
-            if (!isLevelComplete || clearCountdown == null)
+            if (!isLevelComplete)
             {
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(levelCompleteNextScene))
             {
-                clearCountdown.text = "PRESS ENTER TO RESTART";
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetKeyDown(KeyCode.Space))
-                {
-                    RestartCurrentScene();
-                }
-
+                ReturnToMainMenu();
                 return;
             }
 
-            float remaining = Mathf.Max(0f, levelCompleteEndTime - Time.unscaledTime);
-            clearCountdown.text = remaining > 0.05f
-                ? $"DEPLOYING IN {Mathf.CeilToInt(remaining)}"
-                : "DEPLOYING...";
+            PrepareForSceneLoad(false);
+            if (sceneTransition == null || !sceneTransition.TryLoadNextScene())
+            {
+                SceneManager.LoadScene(levelCompleteNextScene);
+            }
+        }
+
+        private void ReturnToMainMenu()
+        {
+            if (!isLevelComplete)
+            {
+                return;
+            }
+
+            PrepareForSceneLoad(true);
+            SceneManager.LoadScene(MainMenuSceneName);
+        }
+
+        private void PrepareForSceneLoad(bool showCursor)
+        {
+            isLevelComplete = false;
+            Time.timeScale = 1f;
+            GameAudio.SetGameplayPaused(false);
+            Cursor.visible = showCursor || !hideSystemCursor;
+
+            if (clearGroup != null)
+            {
+                clearGroup.blocksRaycasts = false;
+                clearGroup.interactable = false;
+            }
+        }
+
+        private static string FormatElapsedTime(float seconds)
+        {
+            int totalSeconds = Mathf.Max(0, Mathf.RoundToInt(seconds));
+            return $"{totalSeconds / 60:00}:{totalSeconds % 60:00}";
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (EventSystem.current == null)
+            {
+                new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            }
         }
 
         private static string FormatSceneName(string sceneName)
@@ -1434,6 +1924,7 @@ namespace DustlineArena.Runtime.Player
                 return;
             }
 
+            pauseSettingsOpen = false;
             Time.timeScale = prePauseTimeScale <= 0f ? 1f : prePauseTimeScale;
             GameAudio.SetGameplayPaused(false);
             if (hideSystemCursor)
@@ -1466,6 +1957,16 @@ namespace DustlineArena.Runtime.Player
                 pauseHint.text = "ESC  RESUME     R  RESTART";
             }
 
+            pauseGroup.blocksRaycasts = true;
+            pauseGroup.interactable = true;
+            if (hudRaycaster != null)
+            {
+                hudRaycaster.enabled = true;
+            }
+
+            EnsureEventSystem();
+            ShowPauseMainMenu(false);
+
             DOTween.Kill(pauseRoot);
             DOTween.Kill(pauseGroup);
             pauseRoot.localScale = Vector3.one * 1.025f;
@@ -1483,6 +1984,45 @@ namespace DustlineArena.Runtime.Player
                 .SetEase(Ease.OutQuad));
             sequence.Join(DOTween.To(() => pauseRoot.localScale, value => pauseRoot.localScale = value, Vector3.one, 0.22f)
                 .SetEase(Ease.OutCubic));
+
+            EventSystem.current?.SetSelectedGameObject(pauseResumeButton?.gameObject);
+        }
+
+        private void OpenPauseSettings()
+        {
+            if (!isPaused || pauseSettingsOpen || pauseMainContent == null || pauseSettingsContent == null)
+            {
+                return;
+            }
+
+            pauseSettingsOpen = true;
+            pauseMainContent.gameObject.SetActive(false);
+            pauseSettingsContent.gameObject.SetActive(true);
+            pauseSettingsContent.localScale = Vector3.one * 0.97f;
+            pauseSettingsContent
+                .DOScale(Vector3.one, 0.16f)
+                .SetUpdate(true)
+                .SetEase(Ease.OutCubic);
+            EventSystem.current?.SetSelectedGameObject(pauseMasterSlider?.gameObject);
+        }
+
+        private void ShowPauseMainMenu(bool playBackSound)
+        {
+            if (pauseMainContent == null || pauseSettingsContent == null)
+            {
+                return;
+            }
+
+            if (playBackSound)
+            {
+                GameAudio.PlayUiBack();
+            }
+
+            pauseSettingsOpen = false;
+            DOTween.Kill(pauseSettingsContent);
+            pauseSettingsContent.gameObject.SetActive(false);
+            pauseMainContent.gameObject.SetActive(true);
+            EventSystem.current?.SetSelectedGameObject(pauseSettingsButton?.gameObject ?? pauseResumeButton?.gameObject);
         }
 
         private void HidePauseOverlay()
@@ -1494,6 +2034,23 @@ namespace DustlineArena.Runtime.Player
 
             DOTween.Kill(pauseRoot);
             DOTween.Kill(pauseGroup);
+            pauseGroup.blocksRaycasts = false;
+            pauseGroup.interactable = false;
+            if (hudRaycaster != null)
+            {
+                hudRaycaster.enabled = false;
+            }
+
+            if (pauseSettingsContent != null)
+            {
+                pauseSettingsContent.gameObject.SetActive(false);
+            }
+
+            if (pauseMainContent != null)
+            {
+                pauseMainContent.gameObject.SetActive(true);
+            }
+
             DOTween.To(() => pauseGroup.alpha, value => pauseGroup.alpha = value, 0f, 0.12f)
                 .SetEase(Ease.OutQuad)
                 .SetUpdate(true)
@@ -1508,7 +2065,21 @@ namespace DustlineArena.Runtime.Player
         private static void RestartCurrentScene()
         {
             Time.timeScale = 1f;
+            GameAudio.SetGameplayPaused(false);
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
+        private void LoadMainMenu()
+        {
+            CancelPendingLevelComplete();
+            isPaused = false;
+            isLevelComplete = false;
+            isGameOver = false;
+            pauseSettingsOpen = false;
+            Time.timeScale = 1f;
+            GameAudio.SetGameplayPaused(false);
+            Cursor.visible = true;
+            SceneManager.LoadScene(MainMenuSceneName);
         }
 
         private void ShowDeathOverlay()
@@ -1519,6 +2090,9 @@ namespace DustlineArena.Runtime.Player
             }
 
             isGameOver = true;
+            prePauseTimeScale = Time.timeScale <= 0f ? 1f : Time.timeScale;
+            Time.timeScale = 0f;
+            GameAudio.SetGameplayPaused(true);
             Cursor.visible = true;
             if (waveSpawner != null)
             {
@@ -1529,6 +2103,28 @@ namespace DustlineArena.Runtime.Player
             {
                 return;
             }
+
+            arenaElapsedTime = Mathf.Max(0f, Time.time - arenaStartTime);
+            if (deathStats != null)
+            {
+                int currentWave = waveSpawner == null ? 1 : Mathf.Clamp(waveSpawner.CurrentWaveIndex + 1, 1, Mathf.Max(1, waveSpawner.WaveCount));
+                int waveCount = waveSpawner == null ? 1 : Mathf.Max(1, waveSpawner.WaveCount);
+                deathStats.text = $"ARENA {arenaIndex:00} / {OperationProgress.TotalArenas:00}   WAVE {currentWave} / {waveCount}   HOSTILES {arenaKills:00}   TIME {FormatElapsedTime(arenaElapsedTime)}";
+            }
+
+            deathGroup.blocksRaycasts = true;
+            deathGroup.interactable = true;
+            if (hudRaycaster != null)
+            {
+                hudRaycaster.enabled = true;
+            }
+
+            if (crosshairGroup != null)
+            {
+                crosshairGroup.alpha = 0f;
+            }
+
+            EnsureEventSystem();
 
             DOTween.Kill(deathRoot);
             DOTween.Kill(deathGroup);
@@ -1545,6 +2141,7 @@ namespace DustlineArena.Runtime.Player
                 .SetEase(Ease.OutCubic));
 
             PunchText(deathSubtitle, new Vector3(0.06f, 0.06f, 0f), 0.24f);
+            EventSystem.current?.SetSelectedGameObject(deathRestartButton?.gameObject);
         }
 
         private void ShowDamageFlash(float amount)

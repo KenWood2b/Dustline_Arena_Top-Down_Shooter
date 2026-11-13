@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -52,41 +51,16 @@ namespace DustlineArena.Runtime.Spawning
             }
         }
 
-        private void OnEnable()
-        {
-            if (waveSpawner != null)
-            {
-                waveSpawner.AllWavesCompleted += OnAllWavesCompleted;
-            }
-        }
-
-        private void OnDisable()
-        {
-            if (waveSpawner != null)
-            {
-                waveSpawner.AllWavesCompleted -= OnAllWavesCompleted;
-            }
-        }
-
-        private void OnAllWavesCompleted()
+        public bool TryLoadNextScene()
         {
             if (loading || string.IsNullOrWhiteSpace(nextSceneName))
             {
-                return;
+                return false;
             }
 
-            StartCoroutine(LoadNextScene());
-        }
-
-        private IEnumerator LoadNextScene()
-        {
             loading = true;
-            if (loadDelay > 0f)
-            {
-                yield return new WaitForSeconds(loadDelay);
-            }
-
             SceneManager.LoadScene(nextSceneName);
+            return true;
         }
 
         private static string GetConventionNextSceneName(string currentSceneName)

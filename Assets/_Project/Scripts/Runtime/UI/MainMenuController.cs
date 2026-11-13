@@ -1,6 +1,7 @@
 using System;
 using DG.Tweening;
 using DustlineArena.Runtime.Audio;
+using DustlineArena.Runtime.Progression;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -784,6 +785,7 @@ namespace DustlineArena.Runtime.UI
             }
 
             loading = true;
+            OperationProgress.BeginNewOperation();
             SetMainButtonsInteractable(false);
             deployButton.interactable = false;
             missionBackButton.interactable = false;

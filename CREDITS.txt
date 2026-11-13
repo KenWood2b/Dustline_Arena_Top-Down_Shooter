@@ -1,0 +1,35 @@
+Dustline Arena — third-party credits
+
+Assets by VerzatileDev, licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
+Source: https://verzatiledev.itch.io/license
+
+Dark Sci-Fi Audio Pack by SRG774 (CC0)
+https://opengameart.org/content/dark-sci-fi-audio-pack
+
+Zombie Moans by Darsycho (CC0)
+https://opengameart.org/content/zombie-moans
+
+Zombie Pain by Vinrax (CC0)
+https://opengameart.org/content/zombie-pain
+
+UI graphics and sound effects by Kenney (CC0)
+https://kenney.nl/assets
+
+Toon Shooter Game Kit and Animated Zombie Pack by Quaternius (CC0)
+https://quaternius.com/packs/toonshootergamekit.html
+https://quaternius.com/packs/animatedzombie.html
+
+KayKit Adventurers by Kay Lousberg (CC0)
+https://kaylousberg.itch.io/kaykit-adventurers
+
+POLYGON Starter Pack by Synty Studios
+https://assetstore.unity.com/packages/3d/environments/polygon-starter-pack-art-by-synty-156819
+
+Low Poly Basic Items Pack — Household Items by Kabungus
+https://assetstore.unity.com/packages/3d/props/low-poly-basic-items-pack-household-items-249507
+
+Sci-fi Guns SFX Pack by Mikael Vanninen
+https://assetstore.unity.com/packages/audio/sound-fx/sci-fi-guns-sfx-pack-181144
+
+DOTween by Daniele Giardini (Demigiant)
+https://dotween.demigiant.com/

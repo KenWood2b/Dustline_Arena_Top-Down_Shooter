@@ -53,3 +53,19 @@ MonoBehaviour:
   - {fileID: 8300000, guid: e6479d8b26bed974695641e7ff793a3a, type: 3}
   - {fileID: 8300000, guid: c6b751dab9a313248bc19949300795b7, type: 3}
   - {fileID: 8300000, guid: 15c820d109d9aaa48b1a0c8323d64ded, type: 3}
+  concreteImpacts:
+  - {fileID: 8300000, guid: 01733b214ce92384ca47f7dc0c5e03a9, type: 3}
+  - {fileID: 8300000, guid: 5491c9a7c71de6d4d989a59719c2d82e, type: 3}
+  - {fileID: 8300000, guid: 5f089b5eb63a5d24c894f05c895161d6, type: 3}
+  metalImpacts:
+  - {fileID: 8300000, guid: e510fd00cfd74f7498634b867bfbfe1b, type: 3}
+  - {fileID: 8300000, guid: ce26a18b6911f6148b45b906cb9eea2a, type: 3}
+  - {fileID: 8300000, guid: 6adc251f478243b4bb84fb3a5f5cac27, type: 3}
+  woodImpacts:
+  - {fileID: 8300000, guid: 84b70c580cb4c054a9f87ebf489c0739, type: 3}
+  - {fileID: 8300000, guid: 1720f3cea1a758b44ace8ced8682ddbd, type: 3}
+  - {fileID: 8300000, guid: d0ff0ef0811a31f44a8b1e5887e143d5, type: 3}
+  softImpacts:
+  - {fileID: 8300000, guid: 172156550dcb7ef44ad25c9fbe01ea5b, type: 3}
+  - {fileID: 8300000, guid: 10c3da97584a2c74ea424bf243083637, type: 3}
+  - {fileID: 8300000, guid: 6bb0ae0f1172d094f93d16ca77dc8d63, type: 3}
